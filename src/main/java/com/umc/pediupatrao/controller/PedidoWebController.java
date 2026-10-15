@@ -12,6 +12,7 @@ import com.umc.pediupatrao.exception.RegraNegocioException;
 import com.umc.pediupatrao.service.ClienteService;
 import com.umc.pediupatrao.service.PedidoService;
 import com.umc.pediupatrao.service.ProdutoService;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Controller;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/** Telas de pedidos: lista, registro, detalhe e transições de status. */
+/** Telas de pedidos: lista, registro, detalhe, transições, desconto e cancelamento. */
 @Controller
 public class PedidoWebController {
 
@@ -123,7 +124,7 @@ public class PedidoWebController {
         }
     }
 
-    // ===================== transições de status =====================
+    // ===================== status, desconto e cancelamento =====================
 
     @PostMapping("/pedidos/{id}/status")
     public String alterarStatus(@PathVariable String id, @RequestParam String status,
@@ -132,6 +133,31 @@ public class PedidoWebController {
             Pedido pedido = pedidoService.atualizarStatus(id, status);
             redirectAttributes.addFlashAttribute("sucesso", "Pedido #" + pedido.getCodigo() + " agora está "
                     + pedido.getStatus().getDescricao() + ".");
+        } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/pedidos/" + id;
+    }
+
+    @PostMapping("/pedidos/{id}/desconto")
+    public String aplicarDesconto(@PathVariable String id, @RequestParam(required = false) BigDecimal percentual,
+            @RequestParam(required = false) String justificativa, RedirectAttributes redirectAttributes) {
+        try {
+            Pedido pedido = pedidoService.aplicarDesconto(id, percentual, justificativa);
+            redirectAttributes.addFlashAttribute("sucesso", "Desconto de " + pedido.getPercentualDesconto().toPlainString()
+                    + "% aplicado. Novo total: R$ " + pedido.getValorTotal().toPlainString());
+        } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/pedidos/" + id;
+    }
+
+    @PostMapping("/pedidos/{id}/cancelar")
+    public String cancelar(@PathVariable String id, @RequestParam(required = false) String justificativa,
+            RedirectAttributes redirectAttributes) {
+        try {
+            Pedido pedido = pedidoService.cancelar(id, justificativa);
+            redirectAttributes.addFlashAttribute("sucesso", "Pedido #" + pedido.getCodigo() + " cancelado.");
         } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
         }

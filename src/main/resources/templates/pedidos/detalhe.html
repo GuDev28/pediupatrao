@@ -162,6 +162,42 @@
                     </form>
                 </div>
             </div>
+
+            <!-- Desconto: somente GERENTE, antes da saída -->
+            <div class="card shadow-sm mb-4 border-success"
+                 th:if="${ehGerente and pedido.status.antesDaSaida}">
+                <div class="card-header fw-semibold text-success">
+                    <i class="bi bi-percent"></i> Aplicar desconto (máx. 20%)
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/pedidos/{id}/desconto(id=${pedido.id})}" method="post">
+                        <div class="input-group mb-2">
+                            <input type="number" name="percentual" class="form-control" min="0" max="20" step="0.01"
+                                   th:value="${pedido.percentualDesconto}" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <input type="text" name="justificativa" class="form-control mb-2" maxlength="500"
+                               placeholder="Motivo (opcional)">
+                        <button type="submit" class="btn btn-outline-success w-100">Aplicar desconto</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Cancelamento: somente GERENTE, antes da saída, com justificativa -->
+            <div class="card shadow-sm border-danger"
+                 th:if="${ehGerente and pedido.status.antesDaSaida}">
+                <div class="card-header fw-semibold text-danger">
+                    <i class="bi bi-x-octagon"></i> Cancelar pedido
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/pedidos/{id}/cancelar(id=${pedido.id})}" method="post"
+                          onsubmit="return confirm('Confirma o cancelamento? Esta ação não pode ser desfeita.');">
+                        <textarea name="justificativa" class="form-control mb-2" rows="3" minlength="10" maxlength="500"
+                                  placeholder="Justificativa obrigatória (mínimo 10 caracteres)" required></textarea>
+                        <button type="submit" class="btn btn-danger w-100">Cancelar pedido</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 

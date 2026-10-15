@@ -16,6 +16,7 @@ import com.umc.pediupatrao.repository.PedidoRepository;
 import com.umc.pediupatrao.repository.ProdutoRepository;
 import com.umc.pediupatrao.security.UsuarioLogado;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,11 +25,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 /**
- * Regras de negócio dos pedidos (RF02, RF03) com auditoria (RF05).
+ * Regras de negócio dos pedidos (RF02, RF03, RF04) com auditoria (RF05).
  *
  * Autorização por método (além das regras de rota do SecurityConfig):
  * - consulta: ADMIN, GERENTE e ATENDENTE;
- * - registro, alteração de itens e avanço de status: GERENTE e ATENDENTE.
+ * - registro, alteração de itens e avanço de status: GERENTE e ATENDENTE;
+ * - desconto e cancelamento: somente GERENTE.
  */
 @Service
 public class PedidoService {
@@ -36,6 +38,8 @@ public class PedidoService {
     public static final int QUANTIDADE_MAXIMA_POR_ITEM = 99;
     public static final int MAXIMO_DE_ITENS = 50;
     public static final int TAMANHO_MAXIMO_OBSERVACAO = 500;
+    public static final int TAMANHO_MINIMO_JUSTIFICATIVA = 10;
+    public static final int TAMANHO_MAXIMO_JUSTIFICATIVA = 500;
 
     private final PedidoRepository pedidoRepository;
     private final ClienteRepository clienteRepository;
@@ -235,6 +239,111 @@ public class PedidoService {
         auditoriaService.registrar(TipoOperacao.ALTERACAO_STATUS_PEDIDO, AuditoriaService.ENTIDADE_PEDIDO,
                 salvo.getId(), "Status: " + atual.getDescricao() + " -> " + novoStatus.getDescricao(),
                 alteracoes.getCampos(), null);
+        return salvo;
+    }
+
+    // ===================== RF04 - Desconto e cancelamento =====================
+
+    /**
+     * Aplica (ou substitui) o desconto percentual do pedido. Exclusivo do GERENTE,
+     * limitado a 20% e permitido apenas antes da saída para entrega ou retirada.
+     * Informar 0% remove o desconto.
+     */
+    @PreAuthorize("hasRole('GERENTE')")
+    public Pedido aplicarDesconto(String id, BigDecimal percentual, String justificativa) {
+        Pedido pedido = buscar(id);
+        verificarNaoCancelado(pedido);
+        if (!pedido.getStatus().isAntesDaSaida()) {
+            throw new RegraNegocioException("Desconto só pode ser aplicado antes da saída para entrega ou retirada "
+                    + "(status atual: " + pedido.getStatus().getDescricao() + ").");
+        }
+        if (percentual == null) {
+            throw new RegraNegocioException("Informe o percentual de desconto.");
+        }
+        if (percentual.compareTo(BigDecimal.ZERO) < 0
+                || percentual.compareTo(Pedido.DESCONTO_MAXIMO_PERCENTUAL) > 0) {
+            throw new RegraNegocioException("O desconto deve estar entre 0% e "
+                    + Pedido.DESCONTO_MAXIMO_PERCENTUAL.toPlainString() + "% do valor do pedido.");
+        }
+        if (percentual.stripTrailingZeros().scale() > 2) {
+            throw new RegraNegocioException("Use no máximo duas casas decimais no percentual.");
+        }
+        BigDecimal novoPercentual = percentual.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal percentualAnterior = pedido.getPercentualDesconto() == null
+                ? BigDecimal.ZERO : pedido.getPercentualDesconto();
+        if (novoPercentual.compareTo(percentualAnterior) == 0) {
+            throw new RegraNegocioException("O pedido já possui desconto de " + novoPercentual.toPlainString() + "%.");
+        }
+        String justificativaLimpa = limparTexto(justificativa);
+        if (justificativaLimpa != null && justificativaLimpa.length() > TAMANHO_MAXIMO_JUSTIFICATIVA) {
+            throw new RegraNegocioException("A justificativa deve ter no máximo "
+                    + TAMANHO_MAXIMO_JUSTIFICATIVA + " caracteres.");
+        }
+
+        BigDecimal descontoAnterior = pedido.getValorDesconto();
+        BigDecimal totalAnterior = pedido.getValorTotal();
+
+        pedido.setPercentualDesconto(novoPercentual);
+        pedido.recalcularValores();
+        pedido.setDescontoAplicadoPor(usuarioLogado.getUsername());
+        pedido.setDataHoraDesconto(LocalDateTime.now(clock));
+        pedido.setJustificativaDesconto(justificativaLimpa);
+
+        Pedido salvo = pedidoRepository.save(pedido);
+
+        Alteracoes alteracoes = new Alteracoes()
+                .comparar("percentualDesconto", percentualAnterior, novoPercentual)
+                .comparar("valorDesconto", descontoAnterior, salvo.getValorDesconto())
+                .comparar("valorTotal", totalAnterior, salvo.getValorTotal());
+        auditoriaService.registrar(TipoOperacao.APLICACAO_DESCONTO, AuditoriaService.ENTIDADE_PEDIDO,
+                salvo.getId(), "Desconto de " + novoPercentual.toPlainString() + "% aplicado",
+                alteracoes.getCampos(), justificativaLimpa);
+        return salvo;
+    }
+
+    /**
+     * Cancela o pedido. Exclusivo do GERENTE, exige justificativa e só é permitido
+     * antes da saída. Itens, valores e histórico são preservados; depois disso o
+     * pedido não aceita nenhuma alteração.
+     */
+    @PreAuthorize("hasRole('GERENTE')")
+    public Pedido cancelar(String id, String justificativa) {
+        Pedido pedido = buscar(id);
+        verificarNaoCancelado(pedido);
+        if (!pedido.getStatus().isAntesDaSaida()) {
+            throw new RegraNegocioException("Pedido com status " + pedido.getStatus().getDescricao()
+                    + " não pode ser cancelado: o cancelamento só é permitido antes da saída para entrega ou retirada.");
+        }
+        String justificativaLimpa = limparTexto(justificativa);
+        if (justificativaLimpa == null || justificativaLimpa.length() < TAMANHO_MINIMO_JUSTIFICATIVA) {
+            throw new RegraNegocioException("A justificativa do cancelamento é obrigatória (mínimo de "
+                    + TAMANHO_MINIMO_JUSTIFICATIVA + " caracteres).");
+        }
+        if (justificativaLimpa.length() > TAMANHO_MAXIMO_JUSTIFICATIVA) {
+            throw new RegraNegocioException("A justificativa deve ter no máximo "
+                    + TAMANHO_MAXIMO_JUSTIFICATIVA + " caracteres.");
+        }
+
+        LocalDateTime agora = LocalDateTime.now(clock);
+        String usuario = usuarioLogado.getUsername();
+        StatusPedido anterior = pedido.getStatus();
+
+        pedido.setStatus(StatusPedido.CANCELADO);
+        pedido.setDataHoraCancelamento(agora);
+        pedido.setCanceladoPor(usuario);
+        pedido.setJustificativaCancelamento(justificativaLimpa);
+        pedido.getHistorico().add(new HistoricoStatus(anterior, StatusPedido.CANCELADO, agora, usuario,
+                usuarioLogado.getNomePerfil()));
+
+        Pedido salvo = pedidoRepository.save(pedido);
+
+        Alteracoes alteracoes = new Alteracoes()
+                .comparar("status", anterior, StatusPedido.CANCELADO)
+                .incluir("dataHoraCancelamento", agora)
+                .incluir("canceladoPor", usuario);
+        auditoriaService.registrar(TipoOperacao.CANCELAMENTO_PEDIDO, AuditoriaService.ENTIDADE_PEDIDO,
+                salvo.getId(), "Pedido cancelado (status anterior: " + anterior.getDescricao() + ")",
+                alteracoes.getCampos(), justificativaLimpa);
         return salvo;
     }
 

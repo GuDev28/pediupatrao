@@ -1,5 +1,7 @@
 package com.umc.pediupatrao.controller;
 
+import com.umc.pediupatrao.dto.CancelamentoRequest;
+import com.umc.pediupatrao.dto.DescontoRequest;
 import com.umc.pediupatrao.dto.PedidoRequest;
 import com.umc.pediupatrao.entity.Pedido;
 import com.umc.pediupatrao.entity.StatusPedido;
@@ -57,5 +59,17 @@ public class PedidoController {
     @PutMapping("/{id}/status")
     public Pedido atualizarStatus(@PathVariable String id, @RequestParam String status) {
         return pedidoService.atualizarStatus(id, status);
+    }
+
+    /** Exclusivo do GERENTE. */
+    @PostMapping("/{id}/desconto")
+    public Pedido aplicarDesconto(@PathVariable String id, @RequestBody DescontoRequest desconto) {
+        return pedidoService.aplicarDesconto(id, desconto.getPercentual(), desconto.getJustificativa());
+    }
+
+    /** Exclusivo do GERENTE; justificativa obrigatória. */
+    @PostMapping("/{id}/cancelar")
+    public Pedido cancelarPedido(@PathVariable String id, @RequestBody CancelamentoRequest cancelamento) {
+        return pedidoService.cancelar(id, cancelamento.getJustificativa());
     }
 }
