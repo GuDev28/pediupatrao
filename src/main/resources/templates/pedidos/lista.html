@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Lista de Pedidos</title>
+</head>
+<body>
+
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">
+            <i class="bi bi-bag me-2 text-primary"></i>Pedidos
+        </h2>
+        <a th:if="${ehGerente or ehAtendente}" th:href="@{/pedidos/novo}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Novo Pedido
+        </a>
+    </div>
+
+    <!-- Filtro por status -->
+    <form th:action="@{/pedidos}" method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-auto">
+            <label for="status" class="form-label small mb-1">Status</label>
+            <select id="status" name="status" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                <option th:each="s : ${todosStatus}" th:value="${s}" th:text="${s.descricao}"
+                        th:selected="${statusFiltro == s}"></option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-funnel"></i> Filtrar</button>
+        </div>
+    </form>
+
+    <!-- Tabela -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-4">Pedido</th>
+                        <th>Cliente</th>
+                        <th>Itens</th>
+                        <th class="text-end">Total (R$)</th>
+                        <th>Status</th>
+                        <th>Entrada</th>
+                        <th>Saída</th>
+                        <th class="text-end pe-4">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Lista vazia -->
+                    <tr th:if="${#lists.isEmpty(pedidos)}">
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                            Nenhum pedido encontrado.
+                        </td>
+                    </tr>
+                    <!-- Linhas -->
+                    <tr th:each="pedido : ${pedidos}">
+                        <td class="ps-4 fw-semibold">
+                            <a th:href="@{/pedidos/{id}(id=${pedido.id})}" th:text="'#' + ${pedido.codigo}">#ABC123</a>
+                        </td>
+                        <td th:text="${pedido.clienteNome}">Cliente</td>
+                        <td>
+                            <span th:text="${pedido.quantidadeTotalItens}">0</span>
+                            <small class="text-muted" th:text="${pedido.tipoEntrega != null} ? '· ' + ${pedido.tipoEntrega.descricao} : ''"></small>
+                        </td>
+                        <td class="text-end">
+                            <span th:text="${#numbers.formatDecimal(pedido.valorTotal, 1, 'POINT', 2, 'COMMA')}">0,00</span>
+                            <span th:if="${pedido.possuiDesconto}" class="badge bg-light text-success border ms-1"
+                                  th:text="'-' + ${#numbers.formatDecimal(pedido.percentualDesconto, 1, 'POINT', 2, 'COMMA')} + '%'">-10%</span>
+                        </td>
+                        <td><span th:replace="~{fragments/status :: badge(${pedido.status})}"></span></td>
+                        <td class="small">
+                            <span th:text="${pedido.dataHoraEntrada != null} ? ${#temporals.format(pedido.dataHoraEntrada, 'dd/MM HH:mm')} : '—'"></span>
+                            <div class="text-muted" th:text="'por ' + ${pedido.registradoPor}"></div>
+                        </td>
+                        <td class="small">
+                            <th:block th:if="${pedido.dataHoraSaida != null}">
+                                <span th:text="${#temporals.format(pedido.dataHoraSaida, 'dd/MM HH:mm')}"></span>
+                                <div class="text-muted" th:text="'por ' + ${pedido.responsavelSaida}"></div>
+                            </th:block>
+                            <span th:if="${pedido.dataHoraSaida == null}" class="text-muted">—</span>
+                        </td>
+                        <td class="text-end pe-4 text-nowrap">
+                            <!-- Avanço rápido para o próximo status do fluxo -->
+                            <form th:if="${(ehGerente or ehAtendente) and pedido.proximoStatus != null}"
+                                  th:action="@{/pedidos/{id}/status(id=${pedido.id})}" method="post" class="d-inline">
+                                <input type="hidden" name="status" th:value="${pedido.proximoStatus}">
+                                <button type="submit" class="btn btn-sm btn-outline-success"
+                                        th:text="'→ ' + ${pedido.proximoStatus.descricao}">Avançar</button>
+                            </form>
+                            <a th:href="@{/pedidos/{id}(id=${pedido.id})}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Detalhes
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer text-muted small" th:if="${!#lists.isEmpty(pedidos)}">
+            Total: <strong th:text="${#lists.size(pedidos)}"></strong> pedido(s)
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
