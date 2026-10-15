@@ -3,14 +3,12 @@ package com.umc.pediupatrao.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.umc.pediupatrao.entity.Cliente;
-import com.umc.pediupatrao.entity.Pedido;
 import com.umc.pediupatrao.entity.Produto;
 import com.umc.pediupatrao.entity.Perfil;
 import com.umc.pediupatrao.entity.Usuario;
 import com.umc.pediupatrao.exception.RecursoNaoEncontradoException;
 import com.umc.pediupatrao.exception.RegraNegocioException;
 import com.umc.pediupatrao.service.ClienteService;
-import com.umc.pediupatrao.service.PedidoService;
 import com.umc.pediupatrao.service.ProdutoService;
 import com.umc.pediupatrao.service.UsuarioService;
 import java.util.List;
@@ -27,9 +25,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class HomeController {
 
     private static final Logger log = LoggerFactory.getLogger(HomeController.class);
-
-    @Autowired
-    private PedidoService pedidoService;
 
     @Autowired
     private ClienteService clienteService;
@@ -134,18 +129,6 @@ public class HomeController {
         model.addAttribute("usuario", usuario);
         model.addAttribute("perfis", Perfil.values());
         model.addAttribute("content", "usuarios/form :: content");
-        return "layout";
-    }
-
-    // ========================
-    // PEDIDOS
-    // ========================
-    @GetMapping("/pedidos")
-    public String pedidos(Model model) {
-        List<Pedido> pedidos = pedidoService.listarPedidos();
-        model.addAttribute("pedidos", pedidos);
-        model.addAttribute("content", "pedidos :: content");
-        log.info("Carregando fragmento: pedidos :: content");
         return "layout";
     }
 

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Selo colorido do status do pedido -->
+<span th:fragment="badge(status)" class="badge"
+      th:classappend="${status == null} ? 'bg-secondary' :
+                      (${status.name() == 'CANCELADO'} ? 'bg-danger' :
+                      (${status.name() == 'FINALIZADO'} ? 'bg-success' :
+                      (${status.name() == 'SAIU_PARA_ENTREGA' or status.name() == 'RETIRADO'} ? 'bg-primary' :
+                      (${status.name() == 'PRONTO'} ? 'bg-info text-dark' :
+                      (${status.name() == 'EM_PREPARACAO'} ? 'bg-warning text-dark' : 'bg-secondary')))))"
+      th:text="${status != null} ? ${status.descricao} : '—'">STATUS</span>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Pedido</title>
+</head>
+<body>
+
+<div th:fragment="content">
+
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+        <a th:href="@{/pedidos}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
+        <h2 class="fw-bold mb-0" th:text="'Pedido #' + ${pedido.codigo}">Pedido</h2>
+        <span class="fs-6" th:replace="~{fragments/status :: badge(${pedido.status})}"></span>
+        <div class="ms-auto d-flex gap-2">
+            <a th:if="${(ehGerente or ehAtendente) and pedido.status.name() == 'RECEBIDO'}"
+               th:href="@{/pedidos/{id}/editar(id=${pedido.id})}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil"></i> Alterar itens
+            </a>
+            <a th:if="${ehAdmin or ehGerente}"
+               th:href="@{/auditoria(entidade='Pedido', entidadeId=${pedido.id})}" class="btn btn-sm btn-outline-dark">
+                <i class="bi bi-journal-text"></i> Auditoria deste pedido
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Coluna principal -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="text-muted small">Cliente</div>
+                            <div class="fw-semibold" th:text="${pedido.clienteNome}">Cliente</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted small">Tipo</div>
+                            <div th:text="${pedido.tipoEntrega != null} ? ${pedido.tipoEntrega.descricao} : '—'">Entrega</div>
+                        </div>
+                        <div class="col-md-3" th:if="${pedido.observacao != null}">
+                            <div class="text-muted small">Observação</div>
+                            <div th:text="${pedido.observacao}">Obs</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Itens e valores calculados no servidor -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-semibold">Itens</div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Produto</th>
+                                <th class="text-center">Qtd.</th>
+                                <th class="text-end">Preço unit. (R$)</th>
+                                <th class="text-end pe-3">Subtotal (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="item : ${pedido.itens}">
+                                <td class="ps-3" th:text="${item.nomeProduto}">Produto</td>
+                                <td class="text-center" th:text="${item.quantidade}">1</td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(item.precoUnitario, 1, 'POINT', 2, 'COMMA')}">0,00</td>
+                                <td class="text-end pe-3" th:text="${#numbers.formatDecimal(item.subtotal, 1, 'POINT', 2, 'COMMA')}">0,00</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end">Subtotal</td>
+                                <td class="text-end pe-3" th:text="${#numbers.formatDecimal(pedido.subtotal, 1, 'POINT', 2, 'COMMA')}">0,00</td>
+                            </tr>
+                            <tr th:if="${pedido.possuiDesconto}">
+                                <td colspan="3" class="text-end text-success">
+                                    Desconto (<span th:text="${#numbers.formatDecimal(pedido.percentualDesconto, 1, 'POINT', 2, 'COMMA')}">0</span>%)
+                                </td>
+                                <td class="text-end pe-3 text-success" th:text="'- ' + ${#numbers.formatDecimal(pedido.valorDesconto, 1, 'POINT', 2, 'COMMA')}">0,00</td>
+                            </tr>
+                            <tr class="fw-bold">
+                                <td colspan="3" class="text-end">Total</td>
+                                <td class="text-end pe-3" th:text="'R$ ' + ${#numbers.formatDecimal(pedido.valorTotal, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Linha do tempo -->
+            <div class="card shadow-sm">
+                <div class="card-header fw-semibold">Histórico de status</div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Data/hora</th>
+                                <th>De</th>
+                                <th>Para</th>
+                                <th>Responsável</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="h : ${pedido.historico}">
+                                <td class="ps-3" th:text="${#temporals.format(h.dataHora, 'dd/MM/yyyy HH:mm:ss')}"></td>
+                                <td th:text="${h.statusAnterior != null} ? ${h.statusAnterior.descricao} : '—'"></td>
+                                <td th:text="${h.statusNovo.descricao}"></td>
+                                <td th:text="${h.usuario} + ' (' + ${h.perfil} + ')'"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna lateral: registros e ações -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header fw-semibold">Entrada e saída</div>
+                <ul class="list-group list-group-flush small">
+                    <li class="list-group-item">
+                        <div class="text-muted">Entrada (registro)</div>
+                        <span th:text="${#temporals.format(pedido.dataHoraEntrada, 'dd/MM/yyyy HH:mm:ss')}"></span>
+                        — <strong th:text="${pedido.registradoPor}"></strong>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="text-muted">Saída (entrega/retirada)</div>
+                        <th:block th:if="${pedido.dataHoraSaida != null}">
+                            <span th:text="${#temporals.format(pedido.dataHoraSaida, 'dd/MM/yyyy HH:mm:ss')}"></span>
+                            — <strong th:text="${pedido.responsavelSaida}"></strong>
+                        </th:block>
+                        <span th:if="${pedido.dataHoraSaida == null}" class="text-muted">Ainda não saiu</span>
+                    </li>
+                    <li class="list-group-item" th:if="${pedido.dataHoraFinalizacao != null}">
+                        <div class="text-muted">Finalização</div>
+                        <span th:text="${#temporals.format(pedido.dataHoraFinalizacao, 'dd/MM/yyyy HH:mm:ss')}"></span>
+                        — <strong th:text="${pedido.finalizadoPor}"></strong>
+                    </li>
+                    <li class="list-group-item" th:if="${pedido.possuiDesconto}">
+                        <div class="text-muted">Desconto autorizado por</div>
+                        <strong th:text="${pedido.descontoAplicadoPor}"></strong>
+                        em <span th:text="${#temporals.format(pedido.dataHoraDesconto, 'dd/MM/yyyy HH:mm')}"></span>
+                        <div th:if="${pedido.justificativaDesconto != null}" class="fst-italic" th:text="${pedido.justificativaDesconto}"></div>
+                    </li>
+                    <li class="list-group-item list-group-item-danger" th:if="${pedido.cancelado}">
+                        <div class="fw-semibold">Cancelado</div>
+                        <span th:text="${#temporals.format(pedido.dataHoraCancelamento, 'dd/MM/yyyy HH:mm:ss')}"></span>
+                        por <strong th:text="${pedido.canceladoPor}"></strong>
+                        <div class="mt-1">Justificativa: <span class="fst-italic" th:text="${pedido.justificativaCancelamento}"></span></div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Avanço de status: GERENTE e ATENDENTE -->
+            <div class="card shadow-sm mb-4" th:if="${(ehGerente or ehAtendente) and pedido.proximoStatus != null}">
+                <div class="card-body">
+                    <form th:action="@{/pedidos/{id}/status(id=${pedido.id})}" method="post">
+                        <input type="hidden" name="status" th:value="${pedido.proximoStatus}">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-arrow-right-circle me-1"></i>
+                            Avançar para <strong th:text="${pedido.proximoStatus.descricao}">próximo</strong>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

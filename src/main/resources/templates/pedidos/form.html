@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Pedido</title>
+</head>
+<body>
+
+<div th:fragment="content">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a th:href="${pedidoEmEdicao != null} ? @{/pedidos/{id}(id=${pedidoEmEdicao.id})} : @{/pedidos}"
+           class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i></a>
+        <h2 class="fw-bold mb-0"
+            th:text="${pedidoEmEdicao != null} ? 'Alterar pedido #' + ${pedidoEmEdicao.codigo} : 'Registrar pedido'">Pedido</h2>
+    </div>
+
+    <div class="alert alert-warning" th:if="${#lists.isEmpty(clientes)}">
+        Nenhum cliente cadastrado.
+        <a th:if="${ehAtendente}" th:href="@{/clientes/novo}">Cadastre um cliente</a> antes de registrar o pedido.
+    </div>
+
+    <div class="card shadow-sm" style="max-width: 820px;">
+        <div class="card-body p-4">
+            <form th:action="${pedidoEmEdicao != null} ? @{/pedidos/{id}/editar(id=${pedidoEmEdicao.id})} : @{/pedidos}"
+                  th:object="${pedidoRequest}" method="post" id="formPedido">
+
+                <div class="row mb-3">
+                    <div class="col-md-7">
+                        <label for="clienteId" class="form-label fw-medium"><i class="bi bi-person me-1"></i>Cliente</label>
+                        <select id="clienteId" class="form-select" th:field="*{clienteId}" required>
+                            <option value="">Selecione o cliente</option>
+                            <option th:each="c : ${clientes}" th:value="${c.id}"
+                                    th:text="${c.nome} + ${c.telefone != null ? ' — ' + c.telefone : ''}">Cliente</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-medium d-block"><i class="bi bi-truck me-1"></i>Saída</label>
+                        <div class="form-check form-check-inline" th:each="t : ${tiposEntrega}">
+                            <input class="form-check-input" type="radio" th:field="*{tipoEntrega}" th:value="${t}" required>
+                            <label class="form-check-label" th:for="${#ids.prev('tipoEntrega')}" th:text="${t.descricao}">Tipo</label>
+                        </div>
+                    </div>
+                </div>
+
+                <label class="form-label fw-medium"><i class="bi bi-basket me-1"></i>Itens</label>
+                <table class="table table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Produto</th>
+                            <th style="width: 120px;">Quantidade</th>
+                            <th style="width: 50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="itens">
+                        <tr th:each="item, st : *{itens}" class="linha-item">
+                            <td>
+                                <select class="form-select form-select-sm produto"
+                                        th:field="*{itens[__${st.index}__].produtoId}">
+                                    <option value="">Selecione</option>
+                                    <option th:each="p : ${produtos}" th:value="${p.id}"
+                                            th:attr="data-preco=${p.preco}"
+                                            th:text="${p.nome} + ' — R$ ' + ${#numbers.formatDecimal(p.preco, 1, 'POINT', 2, 'COMMA')}">Produto</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" min="1" max="99" class="form-control form-control-sm quantidade"
+                                       th:field="*{itens[__${st.index}__].quantidade}">
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger remover" title="Remover item">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-sm btn-outline-secondary mb-3" id="adicionarItem">
+                    <i class="bi bi-plus"></i> Adicionar item
+                </button>
+
+                <div class="mb-3">
+                    <label for="observacao" class="form-label fw-medium">Observação</label>
+                    <textarea id="observacao" class="form-control" rows="2" maxlength="500"
+                              th:field="*{observacao}" placeholder="Ex.: sem cebola, troco para R$ 100"></textarea>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                    <div>
+                        <div class="text-muted small">Estimativa (o valor final é calculado pelo servidor)</div>
+                        <div class="fs-5 fw-bold" id="estimativa">R$ 0,00</div>
+                        <div class="small text-success" th:if="${pedidoEmEdicao != null and pedidoEmEdicao.possuiDesconto}"
+                             th:text="'Desconto de ' + ${pedidoEmEdicao.percentualDesconto} + '% será mantido'"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>
+                        <span th:text="${pedidoEmEdicao != null} ? 'Salvar alterações' : 'Registrar pedido'">Salvar</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modelo de linha usado pelo botão "Adicionar item" -->
+    <template id="modeloItem">
+        <tr class="linha-item">
+            <td>
+                <select class="form-select form-select-sm produto" name="itens[__INDICE__].produtoId">
+                    <option value="">Selecione</option>
+                    <option th:each="p : ${produtos}" th:value="${p.id}" th:attr="data-preco=${p.preco}"
+                            th:text="${p.nome} + ' — R$ ' + ${#numbers.formatDecimal(p.preco, 1, 'POINT', 2, 'COMMA')}">Produto</option>
+                </select>
+            </td>
+            <td><input type="number" min="1" max="99" value="1" class="form-control form-control-sm quantidade"
+                       name="itens[__INDICE__].quantidade"></td>
+            <td class="text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger remover" title="Remover item">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    </template>
+
+    <script>
+        (function () {
+            const corpo = document.getElementById('itens');
+            const modelo = document.getElementById('modeloItem');
+
+            // Mantém os índices sequenciais (itens[0], itens[1], ...) para o binding do Spring
+            function renumerar() {
+                corpo.querySelectorAll('tr.linha-item').forEach(function (linha, i) {
+                    linha.querySelector('.produto').name = 'itens[' + i + '].produtoId';
+                    linha.querySelector('.quantidade').name = 'itens[' + i + '].quantidade';
+                });
+                calcularEstimativa();
+            }
+
+            function calcularEstimativa() {
+                let total = 0;
+                corpo.querySelectorAll('tr.linha-item').forEach(function (linha) {
+                    const opcao = linha.querySelector('.produto').selectedOptions[0];
+                    const preco = opcao ? parseFloat(opcao.dataset.preco || '0') : 0;
+                    const qtd = parseInt(linha.querySelector('.quantidade').value || '0', 10);
+                    if (!isNaN(preco) && !isNaN(qtd)) total += preco * qtd;
+                });
+                document.getElementById('estimativa').textContent =
+                    total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            }
+
+            document.getElementById('adicionarItem').addEventListener('click', function () {
+                const html = modelo.innerHTML.replaceAll('__INDICE__', corpo.children.length);
+                corpo.insertAdjacentHTML('beforeend', html);
+                renumerar();
+            });
+
+            corpo.addEventListener('click', function (e) {
+                const botao = e.target.closest('.remover');
+                if (!botao) return;
+                if (corpo.querySelectorAll('tr.linha-item').length > 1) {
+                    botao.closest('tr').remove();
+                } else {
+                    botao.closest('tr').querySelector('.produto').value = '';
+                }
+                renumerar();
+            });
+
+            corpo.addEventListener('change', calcularEstimativa);
+            corpo.addEventListener('input', calcularEstimativa);
+            calcularEstimativa();
+        })();
+    </script>
+
+</div>
+
+</body>
+</html>
