@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
  * (menu lateral e botões). Serve apenas para a interface: as permissões de verdade
  * são verificadas no SecurityConfig e nos serviços.
  */
-@ControllerAdvice(assignableTypes = {HomeController.class, PedidoWebController.class})
+@ControllerAdvice(assignableTypes = {HomeController.class, PedidoWebController.class, AuditoriaWebController.class})
 public class DadosDoUsuarioNasTelas {
 
     private final UsuarioLogado usuarioLogado;

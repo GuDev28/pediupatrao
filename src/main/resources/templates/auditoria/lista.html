@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Auditoria</title>
+</head>
+<body>
+
+<div th:fragment="content">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold mb-0">
+            <i class="bi bi-journal-text me-2 text-primary"></i>Auditoria
+        </h2>
+        <span class="badge bg-secondary"><i class="bi bi-lock"></i> Somente leitura</span>
+    </div>
+
+    <div class="alert alert-info small py-2" th:if="${ehAdmin}">
+        <i class="bi bi-shield-lock me-1"></i>
+        Para o perfil ADMIN, nome, telefone e endereço de clientes aparecem mascarados
+        (a finalidade deste perfil é a administração do sistema, não o atendimento).
+    </div>
+
+    <!-- Filtros -->
+    <form th:action="@{/auditoria}" method="get" th:object="${filtro}" class="card card-body shadow-sm mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small mb-1" for="entidade">Entidade</label>
+                <select class="form-select form-select-sm" th:field="*{entidade}">
+                    <option value="">Todas</option>
+                    <option th:each="e : ${entidades}" th:value="${e}" th:text="${e}"></option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1" for="operacao">Operação</label>
+                <select class="form-select form-select-sm" th:field="*{operacao}">
+                    <option value="">Todas</option>
+                    <option th:each="o : ${operacoes}" th:value="${o}" th:text="${o.descricao}"></option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1" for="usuario">Usuário</label>
+                <input type="text" class="form-control form-control-sm" th:field="*{usuario}" placeholder="ex.: gerente01">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1" for="entidadeId">Id da entidade</label>
+                <input type="text" class="form-control form-control-sm" th:field="*{entidadeId}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small mb-1" for="dataInicio">De</label>
+                <input type="date" class="form-control form-control-sm" th:field="*{dataInicio}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small mb-1" for="dataFim">Até</label>
+                <input type="date" class="form-control form-control-sm" th:field="*{dataFim}">
+            </div>
+            <div class="col-md-1 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary" title="Filtrar"><i class="bi bi-funnel"></i></button>
+                <a th:href="@{/auditoria}" class="btn btn-sm btn-outline-secondary" title="Limpar"><i class="bi bi-x"></i></a>
+            </div>
+        </div>
+    </form>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3">Data e hora</th>
+                        <th>Usuário</th>
+                        <th>Operação</th>
+                        <th>Entidade</th>
+                        <th>Campo alterado</th>
+                        <th>Valor anterior</th>
+                        <th>Novo valor</th>
+                        <th class="pe-3">Justificativa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${registros.totalElements == 0}">
+                        <td colspan="8" class="text-center text-muted py-5">Nenhum registro encontrado.</td>
+                    </tr>
+                    <th:block th:each="r : ${registros.content}">
+                        <!-- Cada campo alterado vira uma linha; os dados do evento ocupam as linhas agrupadas -->
+                        <tr th:each="c, st : ${#lists.isEmpty(r.alteracoes) ? {null} : r.alteracoes}"
+                            th:classappend="${r.operacao.name() == 'ACESSO_NEGADO'} ? 'table-danger' : ''">
+                            <th:block th:if="${st.first}">
+                                <td class="ps-3 text-nowrap" th:rowspan="${st.size}"
+                                    th:text="${#temporals.format(r.dataHora, 'dd/MM/yyyy - HH:mm:ss')}"></td>
+                                <td th:rowspan="${st.size}">
+                                    <strong th:text="${r.usuario}"></strong>
+                                    <div class="small text-muted" th:text="${r.perfil}"></div>
+                                </td>
+                                <td th:rowspan="${st.size}">
+                                    <span th:text="${r.operacao.descricao}"></span>
+                                    <div class="small text-muted" th:text="${r.descricao}"></div>
+                                </td>
+                                <td th:rowspan="${st.size}">
+                                    <span th:text="${r.entidade}"></span>
+                                    <div class="small text-muted text-break">
+                                        <a th:if="${r.entidade == 'Pedido'}" th:href="@{/pedidos/{id}(id=${r.entidadeId})}"
+                                           th:text="${r.entidadeId}"></a>
+                                        <span th:unless="${r.entidade == 'Pedido'}" th:text="${r.entidadeId}"></span>
+                                    </div>
+                                </td>
+                            </th:block>
+                            <td class="fw-medium" th:text="${c != null} ? ${c.campo} : '—'"></td>
+                            <td class="text-muted text-break" th:text="${c != null and c.valorAnterior != null} ? ${c.valorAnterior} : '—'"></td>
+                            <td class="text-break" th:text="${c != null and c.valorNovo != null} ? ${c.valorNovo} : '—'"></td>
+                            <td class="pe-3 fst-italic" th:if="${st.first}" th:rowspan="${st.size}"
+                                th:text="${r.justificativa != null} ? ${r.justificativa} : ''"></td>
+                        </tr>
+                    </th:block>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center small" th:if="${registros.totalElements > 0}">
+            <span class="text-muted">
+                <strong th:text="${registros.totalElements}">0</strong> registro(s) —
+                página <span th:text="${registros.number + 1}">1</span> de <span th:text="${registros.totalPages}">1</span>
+            </span>
+            <div class="btn-group">
+                <a class="btn btn-sm btn-outline-secondary" th:classappend="${registros.first} ? 'disabled'"
+                   th:href="@{/auditoria(pagina=${registros.number - 1}, entidade=${filtro.entidade}, operacao=${filtro.operacao},
+                             usuario=${filtro.usuario}, entidadeId=${filtro.entidadeId}, dataInicio=${filtro.dataInicio}, dataFim=${filtro.dataFim})}">
+                    &laquo; Anterior
+                </a>
+                <a class="btn btn-sm btn-outline-secondary" th:classappend="${registros.last} ? 'disabled'"
+                   th:href="@{/auditoria(pagina=${registros.number + 1}, entidade=${filtro.entidade}, operacao=${filtro.operacao},
+                             usuario=${filtro.usuario}, entidadeId=${filtro.entidadeId}, dataInicio=${filtro.dataInicio}, dataFim=${filtro.dataFim})}">
+                    Próxima &raquo;
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
