@@ -37,7 +37,14 @@
             <img th:src="@{/images/logo.png}" alt="Logo" class="logo">
             <h3 class="mb-4">Bem-vindo</h3>
             
-            <!-- Formulário de Login -->
+            <!-- Mensagens -->
+            <div class="alert alert-danger py-2" th:if="${param.error}">Usuário ou senha inválidos.</div>
+            <div class="alert alert-success py-2" th:if="${param.logout}">Você saiu do sistema.</div>
+            <div class="alert alert-warning py-2" th:if="${param.expirada}">
+                Sua sessão foi encerrada (seu perfil ou senha foi alterado). Entre novamente.
+            </div>
+
+            <!-- Formulário de Login (o th:action inclui o token CSRF automaticamente) -->
             <form th:action="@{/login}" method="post">
                 <div class="form-group mb-3">
                     <label for="username" class="form-label">Usuário</label>

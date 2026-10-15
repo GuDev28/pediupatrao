@@ -5,7 +5,10 @@ import org.slf4j.LoggerFactory;
 import com.umc.pediupatrao.entity.Cliente;
 import com.umc.pediupatrao.entity.Pedido;
 import com.umc.pediupatrao.entity.Produto;
+import com.umc.pediupatrao.entity.Perfil;
 import com.umc.pediupatrao.entity.Usuario;
+import com.umc.pediupatrao.exception.RecursoNaoEncontradoException;
+import com.umc.pediupatrao.exception.RegraNegocioException;
 import com.umc.pediupatrao.service.ClienteService;
 import com.umc.pediupatrao.service.PedidoService;
 import com.umc.pediupatrao.service.ProdutoService;
@@ -49,11 +52,11 @@ public class HomeController {
     }
 
     // ========================
-    // USUÁRIOS
+    // USUÁRIOS (somente ADMIN)
     // ========================
     @GetMapping("/usuarios")
     public String listarUsuarios(Model model) {
-        List<Usuario> usuarios = (List<Usuario>) usuarioService.listarTodos();
+        List<Usuario> usuarios = usuarioService.listarTodos();
         model.addAttribute("usuarios", usuarios);
         model.addAttribute("content", "usuarios/lista :: content");
         log.info("Carregando fragmento: usuarios/lista :: content");
@@ -62,15 +65,14 @@ public class HomeController {
 
     @GetMapping("/usuarios/novo")
     public String novoUsuarioForm(Model model) {
-        model.addAttribute("usuario", new Usuario());
-        model.addAttribute("content", "usuarios/form :: content");
-        return "layout";
+        return exibirFormularioUsuario(new Usuario(), model);
     }
 
     @GetMapping("/usuarios/editar/{id}")
     public String editarUsuarioForm(@PathVariable String id, Model model,
             RedirectAttributes redirectAttributes) {
         boolean encontrado = usuarioService.buscarPorId(id).map(u -> {
+            u.setPassword(null); // o hash da senha nunca vai para a tela
             model.addAttribute("usuario", u);
             return true;
         }).orElse(false);
@@ -80,23 +82,38 @@ public class HomeController {
             return "redirect:/usuarios";
         }
 
-        model.addAttribute("content", "usuarios/form :: content");
-        return "layout";
+        return exibirFormularioUsuario((Usuario) model.getAttribute("usuario"), model);
     }
 
     @PostMapping("/usuarios/salvar")
-    public String salvarUsuario(@ModelAttribute Usuario usuario,
+    public String salvarUsuario(@ModelAttribute Usuario usuario, Model model,
             RedirectAttributes redirectAttributes) {
-        usuarioService.salvarUsuario(usuario);
+        try {
+            usuarioService.salvarUsuario(usuario);
+        } catch (RegraNegocioException e) {
+            usuario.setPassword(null);
+            model.addAttribute("erro", e.getMessage());
+            return exibirFormularioUsuario(usuario, model);
+        }
         redirectAttributes.addFlashAttribute("sucesso", "Usuário criado com sucesso!");
         return "redirect:/usuarios";
     }
 
     @PostMapping("/usuarios/editar/{id}")
     public String atualizarUsuario(@PathVariable String id,
-            @ModelAttribute Usuario usuario,
+            @ModelAttribute Usuario usuario, Model model,
             RedirectAttributes redirectAttributes) {
-        usuarioService.atualizarUsuario(id, usuario);
+        try {
+            usuarioService.atualizarUsuario(id, usuario);
+        } catch (RegraNegocioException e) {
+            usuario.setId(id);
+            usuario.setPassword(null);
+            model.addAttribute("erro", e.getMessage());
+            return exibirFormularioUsuario(usuario, model);
+        } catch (RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/usuarios";
+        }
         redirectAttributes.addFlashAttribute("sucesso", "Usuário atualizado com sucesso!");
         return "redirect:/usuarios";
     }
@@ -104,9 +121,20 @@ public class HomeController {
     @PostMapping("/usuarios/deletar/{id}")
     public String deletarUsuario(@PathVariable String id,
             RedirectAttributes redirectAttributes) {
-        usuarioService.deletarUsuario(id);
-        redirectAttributes.addFlashAttribute("sucesso", "Usuário removido com sucesso!");
+        try {
+            usuarioService.deletarUsuario(id);
+            redirectAttributes.addFlashAttribute("sucesso", "Usuário removido com sucesso!");
+        } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
         return "redirect:/usuarios";
+    }
+
+    private String exibirFormularioUsuario(Usuario usuario, Model model) {
+        model.addAttribute("usuario", usuario);
+        model.addAttribute("perfis", Perfil.values());
+        model.addAttribute("content", "usuarios/form :: content");
+        return "layout";
     }
 
     // ========================

@@ -16,17 +16,7 @@
         </a>
     </div>
 
-    <!-- Mensagens de feedback -->
-    <div class="alert alert-success alert-dismissible fade show" th:if="${sucesso}" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        <span th:text="${sucesso}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    <div class="alert alert-danger alert-dismissible fade show" th:if="${erro}" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <span th:text="${erro}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+    <!-- Mensagens de sucesso/erro são exibidas pelo layout -->
 
     <!-- Tabela -->
     <div class="card shadow-sm">
@@ -61,8 +51,8 @@
                         </td>
                         <td>
                             <span class="badge"
-                                  th:classappend="${usuario.role == 'ADMIN'} ? 'bg-danger' : 'bg-secondary'"
-                                  th:text="${usuario.role}">
+                                  th:classappend="${usuario.role == null} ? 'bg-secondary' : (${usuario.role.name() == 'ADMIN'} ? 'bg-danger' : (${usuario.role.name() == 'GERENTE'} ? 'bg-warning text-dark' : 'bg-info text-dark'))"
+                                  th:text="${usuario.role != null} ? ${usuario.role} : 'SEM PERFIL'">
                             </span>
                         </td>
                         <td class="text-end pe-4">
@@ -70,7 +60,8 @@
                                class="btn btn-sm btn-outline-primary me-1">
                                 <i class="bi bi-pencil-fill"></i> Editar
                             </a>
-                            <form th:action="@{/usuarios/deletar/{id}(id=${usuario.id})}"
+                            <form th:unless="${usuario.username == usuarioAtual}"
+                                  th:action="@{/usuarios/deletar/{id}(id=${usuario.id})}"
                                   method="post" class="d-inline"
                                   onsubmit="return confirm('Deseja realmente excluir este usuário?')">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">
