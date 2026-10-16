@@ -3,7 +3,6 @@ package com.umc.pediupatrao.controller;
 import com.umc.pediupatrao.entity.Produto;
 import com.umc.pediupatrao.service.ProdutoService;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,10 +10,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/produtos")
 public class ProdutoController {
-    
-    @Autowired
-    private ProdutoService produtoService;
-    
+
+    private final ProdutoService produtoService;
+
+    public ProdutoController(ProdutoService produtoService) {
+        this.produtoService = produtoService;
+    }
+
     @GetMapping
     public List<Produto> listarProdutos() {
         return produtoService.listarProdutos();
@@ -28,6 +30,7 @@ public class ProdutoController {
 
     @PostMapping
     public ResponseEntity<Produto> salvarProduto(@RequestBody Produto produto) {
+        produto.setId(null); // inclusão sempre gera um novo id
         Produto salvo = produtoService.salvar(produto);
         return ResponseEntity.status(HttpStatus.CREATED).body(salvo);
     }

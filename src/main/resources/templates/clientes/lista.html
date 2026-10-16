@@ -9,10 +9,12 @@
         <h2 class="fw-bold mb-0">
             <i class="bi bi-person-raised-hand me-2 text-primary"></i>Clientes
         </h2>
-        <a href="/clientes/novo" class="btn btn-primary">
+        <a th:if="${ehAtendente}" th:href="@{/clientes/novo}" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Novo Cliente
         </a>
     </div>
+
+    <div id="mensagem" class="alert d-none" role="alert"></div>
 
     <!-- Tabela de clientes -->
     <div class="card shadow-sm">
@@ -33,9 +35,37 @@
         </div>
     </div>
 
-    <script>
-        const API_URL = '/api/clientes';
+    <script th:inline="javascript">
+        const API_URL = /*[[@{/api/clientes}]]*/ '/api/clientes';
+        // Apenas para exibir os botões certos; o backend valida o perfil em cada requisição.
+        const PODE_EDITAR = /*[[${ehAtendente}]]*/ false;
+        const PODE_EXCLUIR = /*[[${ehGerente}]]*/ false;
+        const PODE_VER_AUDITORIA = /*[[${ehGerente or ehAdmin}]]*/ false;
+
         const tabelaClientes = document.getElementById('clientes-tabela');
+
+        // Evita injeção de HTML com dados vindos do cadastro (XSS)
+        function escapar(valor) {
+            const div = document.createElement('div');
+            div.textContent = valor == null ? '' : String(valor);
+            return div.innerHTML;
+        }
+
+        function cabecalhoCsrf() {
+            const token = document.querySelector('meta[name="_csrf"]');
+            const header = document.querySelector('meta[name="_csrf_header"]');
+            const headers = {};
+            if (token && header) {
+                headers[header.content] = token.content;
+            }
+            return headers;
+        }
+
+        function mostrarMensagem(texto, tipo) {
+            const div = document.getElementById('mensagem');
+            div.className = 'alert alert-' + tipo;
+            div.textContent = texto;
+        }
 
         function formatarEndereco(cliente) {
             const partes = [
@@ -51,7 +81,11 @@
         }
 
         async function carregarClientes() {
-            const response = await fetch(API_URL);
+            const response = await fetch(API_URL, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) {
+                mostrarMensagem('Não foi possível carregar os clientes (HTTP ' + response.status + ').', 'danger');
+                return;
+            }
             const clientes = await response.json();
             tabelaClientes.innerHTML = '';
 
@@ -67,33 +101,49 @@
             }
 
             clientes.forEach(cliente => {
+                const id = encodeURIComponent(cliente.id);
+                let acoes = '';
+                if (PODE_EDITAR) {
+                    acoes += `<a href="/clientes/editar/${id}" class="btn btn-sm btn-outline-primary me-1">
+                                <i class="bi bi-pencil-fill"></i> Editar</a>`;
+                }
+                if (PODE_VER_AUDITORIA) {
+                    acoes += `<a href="/auditoria?entidade=Cliente&entidadeId=${id}" class="btn btn-sm btn-outline-dark me-1">
+                                <i class="bi bi-journal-text"></i> Histórico</a>`;
+                }
+                if (PODE_EXCLUIR) {
+                    acoes += `<button class="btn btn-sm btn-outline-danger" data-excluir="${escapar(cliente.id)}">
+                                <i class="bi bi-trash-fill"></i> Excluir</button>`;
+                }
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${cliente.nome || '—'}</td>
-                    <td>${cliente.telefone || '—'}</td>
-                    <td>${formatarEndereco(cliente)}</td>
-                    <td class="text-end pe-4">
-                        <a href="/clientes/editar/${cliente.id}" class="btn btn-sm btn-outline-primary me-1">
-                            <i class="bi bi-pencil-fill"></i> Editar
-                        </a>
-                        <button class="btn btn-sm btn-outline-danger" onclick="excluirCliente('${cliente.id}')">
-                            <i class="bi bi-trash-fill"></i> Excluir
-                        </button>
-                    </td>
+                    <td>${escapar(cliente.nome || '—')}</td>
+                    <td>${escapar(cliente.telefone || '—')}</td>
+                    <td>${escapar(formatarEndereco(cliente))}</td>
+                    <td class="text-end pe-4 text-nowrap">${acoes}</td>
                 `;
                 tabelaClientes.appendChild(row);
             });
         }
 
+        tabelaClientes.addEventListener('click', function (e) {
+            const botao = e.target.closest('[data-excluir]');
+            if (botao) excluirCliente(botao.getAttribute('data-excluir'));
+        });
+
         async function excluirCliente(id) {
-            if (confirm('Tem certeza que deseja excluir este cliente?')) {
-                const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-                if (response.ok) {
-                    alert('Cliente excluído com sucesso!');
-                    carregarClientes();
-                } else {
-                    alert('Erro ao excluir o cliente.');
-                }
+            if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+            const response = await fetch(`${API_URL}/${encodeURIComponent(id)}`, {
+                method: 'DELETE',
+                headers: cabecalhoCsrf()
+            });
+            if (response.ok) {
+                mostrarMensagem('Cliente excluído com sucesso!', 'success');
+                carregarClientes();
+            } else {
+                let detalhe = '';
+                try { detalhe = (await response.json()).mensagem || ''; } catch (ignorado) { }
+                mostrarMensagem('Erro ao excluir o cliente. ' + detalhe, 'danger');
             }
         }
 

@@ -54,6 +54,12 @@
             <version>1.18.36</version> <!-- ✅ versão correta -->
             <scope>provided</scope>
         </dependency>
+        <!-- Testes: JUnit 5, Mockito, AssertJ, Spring Test (MockMvc) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>jakarta.persistence</groupId>
             <artifactId>jakarta.persistence-api</artifactId>
