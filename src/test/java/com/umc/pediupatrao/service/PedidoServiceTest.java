@@ -103,6 +103,18 @@ class PedidoServiceTest {
     }
 
     @Test
+    void guardaACategoriaDoProdutoNoItemParaODashboard() {
+        cadastrarClienteEProdutos();
+        Produto calabresa = produto("calabresa", "Pizza Calabresa", 54.90);
+        calabresa.setTipo("Pizza");
+        when(produtoRepository.findById("calabresa")).thenReturn(Optional.of(calabresa));
+
+        Pedido pedido = service.criarPedido(requisicao(item("calabresa", 1)));
+
+        assertThat(pedido.getItens().get(0).getCategoria()).isEqualTo("Pizza");
+    }
+
+    @Test
     void ignoraTotalEStatusEnviadosNaRequisicaoHttp() throws Exception {
         cadastrarClienteEProdutos();
         // Mesmo comportamento do ObjectMapper do Spring Boot: campos desconhecidos são ignorados

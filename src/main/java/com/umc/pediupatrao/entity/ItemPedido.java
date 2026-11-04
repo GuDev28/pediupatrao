@@ -7,13 +7,18 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.FieldType;
 
 /**
- * Item de um pedido. Nome e preço unitário são copiados do produto no momento do
- * registro, preservando o histórico mesmo que o produto mude de preço depois.
+ * Item de um pedido. Nome, categoria e preço unitário são copiados do produto no
+ * momento do registro, preservando o histórico mesmo que o produto mude depois.
  */
 public class ItemPedido {
 
     private String produtoId;
     private String nomeProduto;
+
+    // Categoria do produto (Pizza, Esfiha, Bebida...) no momento do registro.
+    // Usada pelo dashboard; itens antigos (sem categoria) usam o cadastro atual do produto.
+    private String categoria;
+
     private int quantidade;
 
     @Field(targetType = FieldType.DECIMAL128)
@@ -53,6 +58,14 @@ public class ItemPedido {
 
     public void setNomeProduto(String nomeProduto) {
         this.nomeProduto = nomeProduto;
+    }
+
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
     }
 
     public int getQuantidade() {
