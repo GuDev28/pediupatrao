@@ -1,0 +1,69 @@
+/* Dashboard administrativo - complementa o Bootstrap usado no restante do sistema. */
+.dashboard {
+    --dash-azul: #2a78d6;          /* série única dos gráficos */
+    --dash-azul-claro: #86b6ef;    /* ênfase reduzida */
+    --dash-grade: #ecebe8;         /* linhas de grade (hairline) */
+    --dash-texto: #212529;
+    --dash-texto-2: #52514e;
+    --dash-bom: #0a7a0a;           /* variação favorável (texto) */
+    --dash-ruim: #c0392b;          /* variação desfavorável / atraso (texto) */
+    --dash-critico: #d03b3b;
+    --dash-alerta: #fab219;
+    max-width: 1680px;
+}
+
+.dashboard [hidden] { display: none !important; } /* vence o d-flex/d-block do Bootstrap */
+.dashboard .card { border-color: #e6e5e1; }
+.dashboard .card-header { border-bottom-color: #eeede9; }
+
+/* ---------- RF01: indicadores ---------- */
+.kpi .card-body { padding: 1rem 1.1rem; }
+.kpi-rotulo { font-size: .8rem; color: var(--dash-texto-2); }
+.kpi-valor { font-size: 1.6rem; font-weight: 600; line-height: 1.25; color: var(--dash-texto); margin-top: .15rem; }
+.kpi-valor.kpi-hero { font-size: 2rem; }
+.kpi-delta { font-size: .8rem; margin-top: .25rem; color: var(--dash-texto-2); min-height: 1.2em; }
+.kpi-delta .sobe { color: var(--dash-bom); font-weight: 600; }
+.kpi-delta .desce { color: var(--dash-ruim); font-weight: 600; }
+.kpi-secundario .card-body { padding: .75rem 1rem; }
+.kpi-icone { font-size: 1.5rem; }
+.kpi-linha { font-size: 1.15rem; font-weight: 600; }
+
+/* ---------- gráficos ---------- */
+.grafico { position: relative; height: 260px; }
+.grafico-alto { height: 300px; }
+.grafico-status { height: 230px; }
+.painel .vazio { padding: 2.5rem 0; text-align: center; color: var(--dash-texto-2); }
+.tabela-alternativa { max-height: 300px; overflow-y: auto; }
+.tabela-alternativa table { font-size: .85rem; }
+.tabela-alternativa td, .tabela-alternativa th { font-variant-numeric: tabular-nums; }
+
+.mini-numero { font-size: 1.35rem; font-weight: 600; }
+.mini-rotulo { font-size: .75rem; color: var(--dash-texto-2); }
+
+/* Atualização em andamento: mantém a renderização anterior, esmaecida, sem "piscar" */
+.dashboard.carregando .painel,
+.dashboard.carregando .kpi { opacity: .55; transition: opacity .15s; }
+
+/* ---------- RF04: ranking ---------- */
+.tabela-ranking td, .tabela-ranking th { font-variant-numeric: tabular-nums; }
+.tabela-ranking .coluna-barra { width: 28%; padding-right: 1rem; }
+.barra-participacao { height: 8px; background: #edf3fb; border-radius: 4px; overflow: hidden; }
+.barra-participacao > span { display: block; height: 100%; background: var(--dash-azul); border-radius: 4px; }
+.categoria-produto { font-size: .75rem; color: var(--dash-texto-2); }
+
+/* ---------- RF03: fila e lista ---------- */
+.tabela-rolavel { max-height: 360px; overflow-y: auto; }
+.tabela-rolavel thead th, .painel thead th { position: sticky; top: 0; background: #fff; z-index: 1;
+    font-weight: 600; font-size: .78rem; color: var(--dash-texto-2); }
+.painel tbody td { font-size: .86rem; }
+.espera { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.espera.atrasado { color: var(--dash-ruim); font-weight: 600; }
+.selo-status { font-weight: 500; }
+
+@media (max-width: 768px) {
+    .dashboard { padding-top: 2.75rem; } /* espaço para o botão do menu lateral */
+}
+@media (max-width: 576px) {
+    .kpi-valor { font-size: 1.4rem; }
+    .kpi-valor.kpi-hero { font-size: 1.6rem; }
+}
