@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.umc.pediupatrao.config.SegurancaApiTest
+-------------------------------------------------------------------------------
+Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.200 s -- in com.umc.pediupatrao.config.SegurancaApiTest

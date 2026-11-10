@@ -1,0 +1,1497 @@
+{
+  "info": {
+    "name": "PediuPatrão - Dashboard Administrativo (M2)",
+    "description": "Testes da API /api/dashboard: segurança por perfil, contratos JSON de cada endpoint (RF01-RF05) e tratamento de erros (RF07). Rode a coleção inteira pelo Runner do Postman. As datas usam as variáveis dataInicio/dataFim (padrão: outubro/2026; ajuste ao período com pedidos no seu banco).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Segurança e perfis",
+      "item": [
+        {
+          "name": "Sem autenticação -> 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(401); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ATENDENTE -> 403 (tentativa auditada)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "atendente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "atendente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(403); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });",
+                  "pm.test(\"Mensagem cita o perfil\", function () { pm.expect(pm.response.json().mensagem).to.include(\"ATENDENTE\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GERENTE -> 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ADMIN -> 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "teste123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST não é permitido (somente leitura) -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(403); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE não é permitido (somente leitura) -> 403",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/pedidos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "pedidos"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "teste123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(403); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Endpoints (RF01 a RF05)",
+      "item": [
+        {
+          "name": "Opções dos filtros",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/filtros",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "filtros"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test(\"Traz período padrão e opções\", function () { pm.expect(j.periodoPadrao.dias).to.eql(30); pm.expect(j.periodoMaximoDias).to.eql(366); pm.expect(j.status).to.have.lengthOf(7); pm.expect(j.tiposEntrega).to.have.lengthOf(2); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RF01 - Resumo do período",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo?dataInicio={{dataInicio}}&dataFim={{dataFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "{{dataInicio}}"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "{{dataFim}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test(\"Indicadores com comparação\", function () { [\"faturamento\",\"pedidos\",\"ticketMedio\",\"itensVendidos\"].forEach(function (k) { pm.expect(j[k]).to.have.property(\"atual\"); pm.expect(j[k]).to.have.property(\"anterior\"); pm.expect(j[k]).to.have.property(\"variacaoPercentual\"); }); });",
+                  "pm.test(\"Período anterior tem a mesma duração\", function () { pm.expect(j.periodoAnterior.dias).to.eql(j.periodo.dias); });",
+                  "pm.test(\"Ticket médio = faturamento / pedidos\", function () { if (j.pedidos.atual > 0) { pm.expect(Math.abs(j.ticketMedio.atual - j.faturamento.atual / j.pedidos.atual)).to.be.below(0.01); } });",
+                  "pm.collectionVariables.set(\"faturamentoPeriodo\", j.faturamento.atual);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RF02 - Série de vendas por semana",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/vendas/serie?dataInicio={{dataInicio}}&dataFim={{dataFim}}&agrupamento=SEMANA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "vendas",
+                "serie"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "{{dataInicio}}"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "{{dataFim}}"
+                },
+                {
+                  "key": "agrupamento",
+                  "value": "SEMANA"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test(\"Agrupamento semanal\", function () { pm.expect(j.agrupamento).to.eql(\"SEMANA\"); pm.expect(j.pontos.length).to.be.above(0); });",
+                  "pm.test(\"Soma dos pontos = total\", function () { var s = j.pontos.reduce(function (a, p) { return a + p.faturamento; }, 0); pm.expect(Math.abs(s - j.totalFaturamento)).to.be.below(0.05); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RF02 - Distribuição por hora (24 horas)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/vendas/distribuicao?dataInicio={{dataInicio}}&dataFim={{dataFim}}&dimensao=HORA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "vendas",
+                "distribuicao"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "{{dataInicio}}"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "{{dataFim}}"
+                },
+                {
+                  "key": "dimensao",
+                  "value": "HORA"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"24 horas\", function () { pm.expect(pm.response.json().itens).to.have.lengthOf(24); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RF02 - Distribuição por categoria",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/vendas/distribuicao?dataInicio={{dataInicio}}&dataFim={{dataFim}}&dimensao=CATEGORIA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "vendas",
+                "distribuicao"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "{{dataInicio}}"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "{{dataFim}}"
+                },
+                {
+                  "key": "dimensao",
+                  "value": "CATEGORIA"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test(\"Ordenada do maior para o menor\", function () { for (var i = 1; i < j.itens.length; i++) { pm.expect(j.itens[i-1].faturamento).to.be.at.least(j.itens[i].faturamento); } });",
+                  "pm.test(\"Fecha com o faturamento do resumo\", function () { var f = pm.collectionVariables.get(\"faturamentoPeriodo\"); if (f) { pm.expect(Math.abs(j.totalFaturamento - Number(f))).to.be.below(0.01); } });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RF04 - Top 5 por faturamento",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/produtos/mais-vendidos?dataInicio={{dataInicio}}&dataFim={{dataFim}}&ordenarPor=FATURAMENTO&limite=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "produtos",
+                "mais-vendidos"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "{{dataInicio}}"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "{{dataFim}}"
+                },
+                {
+                  "key": "ordenarPor",
+                  "value": "FATURAMENTO"
+                },
+                {
+                  "key": "limite",
+                  "value": "5"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test(\"No máximo 5, ordenados\", function () { pm.expect(j.itens.length).to.be.at.most(5); for (var i = 1; i < j.itens.length; i++) { pm.expect(j.itens[i-1].faturamento).to.be.at.least(j.itens[i].faturamento); } });",
+                  "pm.test(\"Posições sequenciais\", function () { j.itens.forEach(function (p, i) { pm.expect(p.posicao).to.eql(i + 1); }); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RF04 - Ranking só de bebidas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/produtos/mais-vendidos?dataInicio={{dataInicio}}&dataFim={{dataFim}}&categoria=Bebida",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "produtos",
+                "mais-vendidos"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "{{dataInicio}}"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "{{dataFim}}"
+                },
+                {
+                  "key": "categoria",
+                  "value": "Bebida"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Só a categoria pedida\", function () { pm.response.json().itens.forEach(function (p) { pm.expect(p.categoria.toLowerCase()).to.eql(\"bebida\"); }); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RF03 - Situação dos pedidos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/pedidos/situacao?dataInicio={{dataInicio}}&dataFim={{dataFim}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "pedidos",
+                "situacao"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "{{dataInicio}}"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "{{dataFim}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test(\"Os 7 status presentes\", function () { pm.expect(j.porStatus.length).to.be.at.least(7); });",
+                  "pm.test(\"Soma por status = total\", function () { var s = j.porStatus.reduce(function (a, x) { return a + x.quantidade; }, 0); pm.expect(s).to.eql(j.totalPedidos); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RF03 - Pedidos em aberto (atraso após 30 min)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/pedidos/em-aberto?limiteMinutos=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "pedidos",
+                "em-aberto"
+              ],
+              "query": [
+                {
+                  "key": "limiteMinutos",
+                  "value": "30"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test(\"Atrasados coerentes com o limite\", function () { pm.expect(j.limiteMinutos).to.eql(30); j.pedidos.forEach(function (p) { if (p.minutosDesdeEntrada !== null) { pm.expect(p.atrasado).to.eql(p.minutosDesdeEntrada > 30); } }); });",
+                  "pm.test(\"Mais antigos primeiro\", function () { for (var i = 1; i < j.pedidos.length; i++) { pm.expect(j.pedidos[i-1].minutosDesdeEntrada).to.be.at.least(j.pedidos[i].minutosDesdeEntrada); } });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "RF03/RF05 - Pedidos cancelados (paginado)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/pedidos?dataInicio={{dataInicio}}&dataFim={{dataFim}}&status=CANCELADO&pagina=0&tamanho=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "pedidos"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "{{dataInicio}}"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "{{dataFim}}"
+                },
+                {
+                  "key": "status",
+                  "value": "CANCELADO"
+                },
+                {
+                  "key": "pagina",
+                  "value": "0"
+                },
+                {
+                  "key": "tamanho",
+                  "value": "5"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "var j = pm.response.json();",
+                  "pm.test(\"Página com no máximo 5 cancelados\", function () { pm.expect(j.tamanho).to.eql(5); pm.expect(j.conteudo.length).to.be.at.most(5); j.conteudo.forEach(function (p) { pm.expect(p.status).to.eql(\"CANCELADO\"); }); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ADMIN vê nomes de clientes mascarados",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/pedidos?dataInicio={{dataInicio}}&dataFim={{dataFim}}&tamanho=3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "pedidos"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "{{dataInicio}}"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "{{dataFim}}"
+                },
+                {
+                  "key": "tamanho",
+                  "value": "3"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "teste123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Nome mascarado\", function () { pm.response.json().conteudo.forEach(function (p) { if (p.clienteNome) { pm.expect(p.clienteNome).to.include(\"***\"); } }); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Validação e erros (RF07)",
+      "item": [
+        {
+          "name": "Data em formato inválido -> 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo?dataInicio=03/11/2026",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "03/11/2026"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(400); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Data inicial depois da final -> 422",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo?dataInicio=2026-11-03&dataFim=2026-10-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "2026-11-03"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "2026-10-01"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(422); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Período maior que 366 dias -> 422",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo?dataInicio=2025-01-01&dataFim=2026-11-03",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ],
+              "query": [
+                {
+                  "key": "dataInicio",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "dataFim",
+                  "value": "2026-11-03"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 422\", function () { pm.response.to.have.status(422); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(422); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tipo de entrega inexistente -> 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/resumo?tipoEntrega=DRONE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "resumo"
+              ],
+              "query": [
+                {
+                  "key": "tipoEntrega",
+                  "value": "DRONE"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(400); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agrupamento inexistente -> 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/vendas/serie?agrupamento=ANO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "vendas",
+                "serie"
+              ],
+              "query": [
+                {
+                  "key": "agrupamento",
+                  "value": "ANO"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(400); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limite fora do intervalo -> 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/produtos/mais-vendidos?limite=500",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "produtos",
+                "mais-vendidos"
+              ],
+              "query": [
+                {
+                  "key": "limite",
+                  "value": "500"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(400); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limite não numérico -> 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/produtos/mais-vendidos?limite=dez",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "produtos",
+                "mais-vendidos"
+              ],
+              "query": [
+                {
+                  "key": "limite",
+                  "value": "dez"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(400); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Status inexistente -> 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/pedidos?status=ENTREGUE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "pedidos"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ENTREGUE"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "gerente01",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "gerente123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status esperado: 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Erro em JSON com mensagem\", function () { var j = pm.response.json(); pm.expect(j.status).to.eql(400); pm.expect(j.mensagem).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "dataInicio",
+      "value": "2026-10-01"
+    },
+    {
+      "key": "dataFim",
+      "value": "2026-10-31"
+    },
+    {
+      "key": "faturamentoPeriodo",
+      "value": ""
+    }
+  ]
+}

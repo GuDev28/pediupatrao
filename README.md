@@ -9,6 +9,12 @@ Esta versão evolui o projeto fornecido mantendo a arquitetura em camadas (entid
 - cancelamento (com justificativa) e desconto (até 20%) exclusivos do GERENTE;
 - auditoria persistente e imutável no MongoDB para pedidos, clientes, produtos, usuários e tentativas de acesso negado.
 
+> **Novo (Atividade M2): Dashboard Administrativo.** Painel em `/dashboard` (ADMIN e GERENTE) com indicadores de vendas comparados ao período anterior, gráficos de evolução e distribuição, situação dos pedidos com fila em tempo real, produtos mais vendidos, filtros e atualização automática. Os dados vêm da API `/api/dashboard/**`, integrada ao MongoDB.
+> Documentação completa (requisitos, projeto, endpoints, evidências de testes e gitflow) em **[`docs/dashboard/`](docs/dashboard/README.md)**.
+> Demonstração com histórico de exemplo: `./mvnw spring-boot:run -Dspring-boot.run.profiles=demo` (usa o banco separado `pediupatrao_demo`). Segue abaixo o vídeo da apresentação:
+
+> [![Vídeo da apresentação](https://img.youtube.com/vi/pP7Hb_YoSkM/0.jpg)](https://youtu.be/pP7Hb_YoSkM)
+
 ---
 
 ## 1. Como executar
@@ -52,7 +58,7 @@ Usuários antigos com role `USER` (ou sem role) são migrados na inicialização
 ```bash
 ./mvnw test        # Windows: mvnw.cmd test
 ```
-São 68 testes (JUnit 5 + Mockito + AssertJ + MockMvc) que **não precisam de MongoDB**:
+São 139 testes (JUnit 5 + Mockito + AssertJ + MockMvc) que **não precisam de MongoDB**. Os 71 testes do dashboard estão descritos em [`docs/dashboard/04-evidencias-de-testes.md`](docs/dashboard/04-evidencias-de-testes.md). Os demais:
 
 | Classe de teste | O que verifica |
 |---|---|
@@ -186,6 +192,16 @@ Integridade e proteção de dados:
 | `GET/POST/PUT/DELETE /api/usuarios` | ADMIN | Usuários e perfis |
 | `GET /api/clientes` · `POST` · `PUT /{id}` · `DELETE /{id}` | GET: GERENTE/ATENDENTE · POST/PUT: ATENDENTE · DELETE: GERENTE | Clientes |
 | `GET /api/produtos` · `POST` · `PUT` · `DELETE` | GET: todos · demais: GERENTE | Produtos |
+| `GET /api/dashboard/filtros` | ADMIN, GERENTE | Opções dos filtros do dashboard e período padrão |
+| `GET /api/dashboard/resumo` | ADMIN, GERENTE | Indicadores de vendas com comparação ao período anterior |
+| `GET /api/dashboard/vendas/serie?agrupamento=` | ADMIN, GERENTE | Evolução das vendas (DIA, SEMANA ou MES) |
+| `GET /api/dashboard/vendas/distribuicao?dimensao=` | ADMIN, GERENTE | Faturamento por HORA, DIA_SEMANA, TIPO_ENTREGA ou CATEGORIA |
+| `GET /api/dashboard/produtos/mais-vendidos?ordenarPor=&categoria=&limite=` | ADMIN, GERENTE | Ranking de produtos |
+| `GET /api/dashboard/pedidos/situacao` | ADMIN, GERENTE | Pedidos por status e tempos médios |
+| `GET /api/dashboard/pedidos/em-aberto?limiteMinutos=` | ADMIN, GERENTE | Fila em tempo real com atrasados |
+| `GET /api/dashboard/pedidos?status=&pagina=&tamanho=` | ADMIN, GERENTE | Pedidos do período, paginados |
+
+Filtros comuns do dashboard: `dataInicio`, `dataFim` (aaaa-mm-dd), `tipoEntrega`, `atendente`. Detalhes em [`docs/dashboard/03-api-endpoints.md`](docs/dashboard/03-api-endpoints.md).
 
 ---
 

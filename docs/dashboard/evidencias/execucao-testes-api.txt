@@ -1,0 +1,118 @@
+Execução de docs/dashboard/testes-api.sh em 03/11/2026 17:24 (aplicação local com dados de demonstração)
+
+=== Segurança e perfis ===
+[OK] Sem autenticação
+        GET /api/dashboard/resumo  -> esperado 401, obtido 401
+        {"status":401,"erro":"Unauthorized","mensagem":"Autenticação necessária. Faça login ou envie credenciais válidas.","caminho":"/api/dashboard/resumo","dataHora":"2026-11-03T17:24:15.730757771"}
+
+[OK] Senha incorreta
+        GET /api/dashboard/resumo  -> esperado 401, obtido 401
+        {"status":401,"erro":"Unauthorized","mensagem":"Autenticação necessária. Faça login ou envie credenciais válidas.","caminho":"/api/dashboard/resumo","dataHora":"2026-11-03T17:24:15.746046432"}
+
+[OK] ATENDENTE não acessa o dashboard (tentativa auditada)
+        GET /api/dashboard/resumo  -> esperado 403, obtido 403
+        {"status":403,"erro":"Forbidden","mensagem":"Acesso negado: o perfil ATENDENTE não tem permissão para esta operação.","caminho":"/api/dashboard/resumo","dataHora":"2026-11-03T17:24:15.762258015"}
+
+[OK] GERENTE consulta o resumo
+        GET /api/dashboard/resumo  -> esperado 200, obtido 200
+        {"periodo":{"dataInicio":"2026-10-05","dataFim":"2026-11-03","dias":30},"periodoAnterior":{"dataInicio":"2026-09-05","dataFim":"2026-10-04","dias":30},"faturamento":{"atual":51045.26,"anterior":53960.46,"variacaoPercentual":-5.4},"pedidos":{"atual":498,"anterior":515,"variacaoPercentual":-3.3},"tick
+
+[OK] ADMIN consulta o resumo
+        GET /api/dashboard/resumo  -> esperado 200, obtido 200
+        {"periodo":{"dataInicio":"2026-10-05","dataFim":"2026-11-03","dias":30},"periodoAnterior":{"dataInicio":"2026-09-05","dataFim":"2026-10-04","dias":30},"faturamento":{"atual":51045.26,"anterior":53960.46,"variacaoPercentual":-5.4},"pedidos":{"atual":498,"anterior":515,"variacaoPercentual":-3.3},"tick
+
+[OK] API somente leitura (POST negado)
+        POST /api/dashboard/resumo  -> esperado 403, obtido 403
+        {"status":403,"erro":"Forbidden","mensagem":"Acesso negado: o perfil GERENTE não tem permissão para esta operação.","caminho":"/api/dashboard/resumo","dataHora":"2026-11-03T17:24:15.807695967"}
+
+[OK] API somente leitura (DELETE negado)
+        DELETE /api/dashboard/pedidos  -> esperado 403, obtido 403
+        {"status":403,"erro":"Forbidden","mensagem":"Acesso negado: o perfil ADMIN não tem permissão para esta operação.","caminho":"/api/dashboard/pedidos","dataHora":"2026-11-03T17:24:15.82003292"}
+
+=== Endpoints (RF01 a RF05) ===
+[OK] Opções dos filtros
+        GET /api/dashboard/filtros  -> esperado 200, obtido 200
+        {"periodoPadrao":{"dataInicio":"2026-10-05","dataFim":"2026-11-03","dias":30},"periodoMaximoDias":366,"tiposEntrega":[{"valor":"ENTREGA","descricao":"Entrega"},{"valor":"RETIRADA","descricao":"Retirada no balcão"}],"status":[{"valor":"RECEBIDO","descricao":"Recebido"},{"valor":"EM_PREPARACAO","desc
+
+[OK] Resumo com período e tipo de entrega
+        GET /api/dashboard/resumo?dataInicio=2026-10-01&dataFim=2026-10-31&tipoEntrega=ENTREGA  -> esperado 200, obtido 200
+        {"periodo":{"dataInicio":"2026-10-01","dataFim":"2026-10-31","dias":31},"periodoAnterior":{"dataInicio":"2026-08-31","dataFim":"2026-09-30","dias":31},"faturamento":{"atual":36632.68,"anterior":32827.32,"variacaoPercentual":11.6},"pedidos":{"atual":354,"anterior":309,"variacaoPercentual":14.6},"tick
+
+[OK] Série de vendas por semana
+        GET /api/dashboard/vendas/serie?agrupamento=SEMANA  -> esperado 200, obtido 200
+        {"periodo":{"dataInicio":"2026-10-05","dataFim":"2026-11-03","dias":30},"agrupamento":"SEMANA","pontos":[{"inicio":"2026-10-05","fim":"2026-10-11","rotulo":"Sem. 05/10","faturamento":11970.47,"pedidos":114,"ticketMedio":105.00},{"inicio":"2026-10-12","fim":"2026-10-18","rotulo":"Sem. 12/10","faturam
+
+[OK] Distribuição por hora
+        GET /api/dashboard/vendas/distribuicao?dimensao=HORA  -> esperado 200, obtido 200
+        {"periodo":{"dataInicio":"2026-10-05","dataFim":"2026-11-03","dias":30},"dimensao":"HORA","itens":[{"chave":"0","rotulo":"00h","pedidos":0,"quantidadeItens":0,"faturamento":0.00,"percentualFaturamento":0.0},{"chave":"1","rotulo":"01h","pedidos":0,"quantidadeItens":0,"faturamento":0.00,"percentualFat
+
+[OK] Distribuição por categoria
+        GET /api/dashboard/vendas/distribuicao?dimensao=CATEGORIA  -> esperado 200, obtido 200
+        {"periodo":{"dataInicio":"2026-10-05","dataFim":"2026-11-03","dias":30},"dimensao":"CATEGORIA","itens":[{"chave":"Pizza","rotulo":"Pizza","pedidos":432,"quantidadeItens":796,"faturamento":43832.02,"percentualFaturamento":85.9},{"chave":"Esfiha","rotulo":"Esfiha","pedidos":59,"quantidadeItens":473,"f
+
+[OK] Top 5 produtos por faturamento
+        GET /api/dashboard/produtos/mais-vendidos?ordenarPor=FATURAMENTO&limite=5  -> esperado 200, obtido 200
+        {"periodo":{"dataInicio":"2026-10-05","dataFim":"2026-11-03","dias":30},"ordenarPor":"FATURAMENTO","categoria":null,"limite":5,"totalProdutos":11,"quantidadeTotal":1534,"faturamentoTotal":51045.26,"itens":[{"posicao":1,"produtoId":"prod0","nome":"Pizza Calabresa","categoria":"Pizza","quantidade":222
+
+[OK] Ranking só de bebidas
+        GET /api/dashboard/produtos/mais-vendidos?categoria=Bebida  -> esperado 200, obtido 200
+        {"periodo":{"dataInicio":"2026-10-05","dataFim":"2026-11-03","dias":30},"ordenarPor":"QUANTIDADE","categoria":"Bebida","limite":10,"totalProdutos":2,"quantidadeTotal":205,"faturamentoTotal":2326.74,"itens":[{"posicao":1,"produtoId":"prod9","nome":"Suco Natural 500ml","categoria":"Bebida","quantidade
+
+[OK] Situação dos pedidos
+        GET /api/dashboard/pedidos/situacao  -> esperado 200, obtido 200
+        {"periodo":{"dataInicio":"2026-10-05","dataFim":"2026-11-03","dias":30},"totalPedidos":518,"porStatus":[{"status":"RECEBIDO","descricao":"Recebido","quantidade":4,"percentual":0.8,"valorTotal":523.20},{"status":"EM_PREPARACAO","descricao":"Em preparação","quantidade":3,"percentual":0.6,"valorTotal
+
+[OK] Pedidos em aberto (atraso após 30 min)
+        GET /api/dashboard/pedidos/em-aberto?limiteMinutos=30&limite=5  -> esperado 200, obtido 200
+        {"limiteMinutos":30,"total":8,"atrasados":4,"pedidos":[{"id":"6650a1b2c3d4e5f6a7eae6e8","codigo":"EAE6E8","clienteNome":"João Pedro Santos","tipoEntrega":"RETIRADA","status":"PRONTO","statusDescricao":"Pronto","valorTotal":99.80,"dataHoraEntrada":"2026-11-03T16:08:52.790549977","minutosDesdeEntrada
+
+[OK] Pedidos cancelados do período (paginado)
+        GET /api/dashboard/pedidos?status=CANCELADO&pagina=0&tamanho=5  -> esperado 200, obtido 200
+        {"conteudo":[{"id":"6650a1b2c3d4e5f6a7e8d909","codigo":"E8D909","clienteNome":"Diego Martins","tipoEntrega":"ENTREGA","status":"CANCELADO","statusDescricao":"Cancelado","quantidadeItens":4,"valorTotal":207.60,"percentualDesconto":0,"dataHoraEntrada":"2026-11-02T13:02:00","dataHoraSaida":null,"regist
+
+[OK] ADMIN vê nomes de clientes mascarados
+        GET /api/dashboard/pedidos?tamanho=2  -> esperado 200, obtido 200
+        {"conteudo":[{"id":"6650a1b2c3d4e5f6a7ea0e5f","codigo":"EA0E5F","clienteNome":"F*** N***","tipoEntrega":"ENTREGA","status":"RECEBIDO","statusDescricao":"Recebido","quantidadeItens":4,"valorTotal":117.80,"percentualDesconto":0,"dataHoraEntrada":"2026-11-03T17:17:52.790549977","dataHoraSaida":null,"re
+
+=== Validação e tratamento de erros (RF07) ===
+[OK] Data em formato inválido
+        GET /api/dashboard/resumo?dataInicio=03/11/2026  -> esperado 400, obtido 400
+        {"status":400,"erro":"Bad Request","mensagem":"O parâmetro 'dataInicio' deve ser uma data válida no formato aaaa-mm-dd (recebido: '03/11/2026').","caminho":"/api/dashboard/resumo","dataHora":"2026-11-03T17:24:15.98777143"}
+
+[OK] Data inicial depois da final
+        GET /api/dashboard/resumo?dataInicio=2026-11-03&dataFim=2026-10-01  -> esperado 422, obtido 422
+        {"status":422,"erro":"Unprocessable Entity","mensagem":"A data inicial (2026-11-03) não pode ser posterior à data final (2026-10-01).","caminho":"/api/dashboard/resumo","dataHora":"2026-11-03T17:24:16.010858089"}
+
+[OK] Período maior que 366 dias
+        GET /api/dashboard/resumo?dataInicio=2025-01-01&dataFim=2026-11-03  -> esperado 422, obtido 422
+        {"status":422,"erro":"Unprocessable Entity","mensagem":"O período consultado pode ter no máximo 366 dias (informado: 672 dias). Reduza o intervalo de datas.","caminho":"/api/dashboard/resumo","dataHora":"2026-11-03T17:24:16.027109708"}
+
+[OK] Tipo de entrega inexistente
+        GET /api/dashboard/resumo?tipoEntrega=DRONE  -> esperado 400, obtido 400
+        {"status":400,"erro":"Bad Request","mensagem":"Valor inválido para 'tipoEntrega': 'DRONE'. Valores aceitos: ENTREGA, RETIRADA.","caminho":"/api/dashboard/resumo","dataHora":"2026-11-03T17:24:16.041249682"}
+
+[OK] Agrupamento inexistente
+        GET /api/dashboard/vendas/serie?agrupamento=ANO  -> esperado 400, obtido 400
+        {"status":400,"erro":"Bad Request","mensagem":"Valor inválido para 'agrupamento': 'ANO'. Valores aceitos: DIA, SEMANA, MES.","caminho":"/api/dashboard/vendas/serie","dataHora":"2026-11-03T17:24:16.057822242"}
+
+[OK] Dimensão inexistente
+        GET /api/dashboard/vendas/distribuicao?dimensao=COR  -> esperado 400, obtido 400
+        {"status":400,"erro":"Bad Request","mensagem":"Valor inválido para 'dimensao': 'COR'. Valores aceitos: HORA, DIA_SEMANA, TIPO_ENTREGA, CATEGORIA.","caminho":"/api/dashboard/vendas/distribuicao","dataHora":"2026-11-03T17:24:16.072133226"}
+
+[OK] Limite do ranking fora do intervalo
+        GET /api/dashboard/produtos/mais-vendidos?limite=500  -> esperado 400, obtido 400
+        {"status":400,"erro":"Bad Request","mensagem":"O parâmetro 'limite' deve estar entre 1 e 50 (recebido: 500).","caminho":"/api/dashboard/produtos/mais-vendidos","dataHora":"2026-11-03T17:24:16.091567369"}
+
+[OK] Limite do ranking não numérico
+        GET /api/dashboard/produtos/mais-vendidos?limite=dez  -> esperado 400, obtido 400
+        {"status":400,"erro":"Bad Request","mensagem":"Valor inválido para o parâmetro 'limite': 'dez' (esperado um número inteiro).","caminho":"/api/dashboard/produtos/mais-vendidos","dataHora":"2026-11-03T17:24:16.111459835"}
+
+[OK] Status inexistente
+        GET /api/dashboard/pedidos?status=ENTREGUE  -> esperado 400, obtido 400
+        {"status":400,"erro":"Bad Request","mensagem":"Valor inválido para 'status': 'ENTREGUE'. Valores aceitos: RECEBIDO, EM_PREPARACAO, PRONTO, SAIU_PARA_ENTREGA, RETIRADO, FINALIZADO, CANCELADO.","caminho":"/api/dashboard/pedidos","dataHora":"2026-11-03T17:24:16.127418672"}
+
+[OK] Tamanho de página fora do intervalo
+        GET /api/dashboard/pedidos?tamanho=1000  -> esperado 400, obtido 400
+        {"status":400,"erro":"Bad Request","mensagem":"O parâmetro 'tamanho' deve estar entre 1 e 100 (recebido: 1000).","caminho":"/api/dashboard/pedidos","dataHora":"2026-11-03T17:24:16.140500961"}
+
+=== Resultado: 28 aprovado(s), 0 reprovado(s) ===
