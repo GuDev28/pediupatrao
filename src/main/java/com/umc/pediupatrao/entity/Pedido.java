@@ -8,6 +8,8 @@ import java.util.List;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
+import org.springframework.data.mongodb.core.index.IndexDirection;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.FieldType;
@@ -48,9 +50,12 @@ public class Pedido {
     @Field(targetType = FieldType.DECIMAL128)
     private BigDecimal valorTotal = BigDecimal.ZERO;
 
+    // Índice usado pelo dashboard (pedidos em aberto e filtro por status)
+    @Indexed
     private StatusPedido status;
 
-    // Entrada (RECEBIDO)
+    // Entrada (RECEBIDO). Índice usado pelas consultas por período do dashboard.
+    @Indexed(direction = IndexDirection.DESCENDING)
     private LocalDateTime dataHoraEntrada;
     private String registradoPor;
 

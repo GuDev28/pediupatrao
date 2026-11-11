@@ -420,7 +420,10 @@ public class PedidoService {
         if (produto.getPreco() == null || produto.getPreco() <= 0) {
             throw new RegraNegocioException("O produto '" + produto.getNome() + "' está sem preço válido.");
         }
-        return new ItemPedido(produto.getId(), produto.getNome(), quantidade, BigDecimal.valueOf(produto.getPreco()));
+        ItemPedido item = new ItemPedido(produto.getId(), produto.getNome(), quantidade,
+                BigDecimal.valueOf(produto.getPreco()));
+        item.setCategoria(produto.getTipo());
+        return item;
     }
 
     private static String limparTexto(String texto) {

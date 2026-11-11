@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+
+<!--
+    Dashboard administrativo (ADMIN e GERENTE).
+    Esta página só monta a estrutura: todos os números vêm da API /api/dashboard/** (RF06),
+    carregada e atualizada pelo script /js/dashboard.js.
+-->
+<div th:fragment="content" id="dashboard" class="dashboard"
+     th:attr="data-api=@{/api/dashboard},data-login=@{/login},data-pedidos=@{/pedidos/}">
+
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+
+    <!-- Cabeçalho: título, última atualização e atualização automática (RF07) -->
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+        <div>
+            <h2 class="fw-bold mb-0"><i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</h2>
+            <p class="text-muted small mb-0">Desempenho das vendas e andamento dos pedidos</p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="small text-muted" id="dash-atualizado" aria-live="polite">Carregando…</span>
+            <label class="visually-hidden" for="dash-auto">Atualização automática</label>
+            <select id="dash-auto" class="form-select form-select-sm w-auto" title="Atualização automática">
+                <option value="0">Atualização automática: desligada</option>
+                <option value="30">A cada 30 segundos</option>
+                <option value="60" selected>A cada 1 minuto</option>
+                <option value="300">A cada 5 minutos</option>
+            </select>
+            <button type="button" id="dash-atualizar" class="btn btn-sm btn-primary">
+                <i class="bi bi-arrow-clockwise me-1"></i>Atualizar
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros (RF05): uma linha só, valem para todo o painel -->
+    <form id="dash-filtros" class="card card-body shadow-sm mb-3 py-2" novalidate>
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-xl-auto">
+                <span class="form-label small mb-1 d-block">Período</span>
+                <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Períodos rápidos" id="dash-presets">
+                    <button type="button" class="btn btn-outline-secondary" data-preset="hoje">Hoje</button>
+                    <button type="button" class="btn btn-outline-secondary" data-preset="7">7 dias</button>
+                    <button type="button" class="btn btn-outline-secondary" data-preset="30">30 dias</button>
+                    <button type="button" class="btn btn-outline-secondary" data-preset="mes">Este mês</button>
+                    <button type="button" class="btn btn-outline-secondary" data-preset="90">90 dias</button>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 col-xl-auto">
+                <label for="dash-inicio" class="form-label small mb-1">De</label>
+                <input type="date" id="dash-inicio" name="dataInicio" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-3 col-xl-auto">
+                <label for="dash-fim" class="form-label small mb-1">Até</label>
+                <input type="date" id="dash-fim" name="dataFim" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-3 col-xl-2">
+                <label for="dash-tipo" class="form-label small mb-1">Tipo de entrega</label>
+                <select id="dash-tipo" name="tipoEntrega" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3 col-xl-2">
+                <label for="dash-atendente" class="form-label small mb-1">Registrado por</label>
+                <select id="dash-atendente" name="atendente" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="col-12 col-xl-auto ms-xl-auto">
+                <button type="button" id="dash-limpar" class="btn btn-sm btn-link text-decoration-none px-0">
+                    <i class="bi bi-x-circle me-1"></i>Limpar filtros
+                </button>
+            </div>
+        </div>
+        <div class="invalid-feedback d-block small mt-1" id="dash-erro-filtro" hidden></div>
+    </form>
+
+    <!-- Mensagens de erro da API / conexão (RF07) -->
+    <div id="dash-alerta" class="alert alert-warning d-flex align-items-start gap-2 py-2 small" role="alert" hidden>
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <div id="dash-alerta-texto"></div>
+    </div>
+
+    <!-- RF01 - Indicadores gerais de vendas -->
+    <section aria-labelledby="titulo-indicadores" class="mb-3">
+        <h3 id="titulo-indicadores" class="visually-hidden">Indicadores gerais de vendas</h3>
+        <div class="row g-3" id="dash-kpis">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card kpi h-100" data-kpi="faturamento">
+                    <div class="card-body">
+                        <div class="kpi-rotulo">Faturamento</div>
+                        <div class="kpi-valor kpi-hero" data-valor>—</div>
+                        <div class="kpi-delta" data-delta></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card kpi h-100" data-kpi="pedidos">
+                    <div class="card-body">
+                        <div class="kpi-rotulo">Pedidos</div>
+                        <div class="kpi-valor" data-valor>—</div>
+                        <div class="kpi-delta" data-delta></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card kpi h-100" data-kpi="ticketMedio">
+                    <div class="card-body">
+                        <div class="kpi-rotulo">Ticket médio</div>
+                        <div class="kpi-valor" data-valor>—</div>
+                        <div class="kpi-delta" data-delta></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="card kpi h-100" data-kpi="itensVendidos">
+                    <div class="card-body">
+                        <div class="kpi-rotulo">Itens vendidos</div>
+                        <div class="kpi-valor" data-valor>—</div>
+                        <div class="kpi-delta" data-delta></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card kpi kpi-secundario h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <i class="bi bi-x-octagon kpi-icone text-danger" aria-hidden="true"></i>
+                        <div>
+                            <div class="kpi-rotulo">Cancelamentos</div>
+                            <div class="kpi-linha"><span id="kpi-cancelados">—</span>
+                                <span class="text-muted small" id="kpi-cancelados-detalhe"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card kpi kpi-secundario h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <i class="bi bi-percent kpi-icone text-primary" aria-hidden="true"></i>
+                        <div>
+                            <div class="kpi-rotulo">Descontos concedidos</div>
+                            <div class="kpi-linha"><span id="kpi-descontos">—</span>
+                                <span class="text-muted small" id="kpi-descontos-detalhe"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card kpi kpi-secundario h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <i class="bi bi-hourglass-split kpi-icone text-warning" aria-hidden="true"></i>
+                        <div>
+                            <div class="kpi-rotulo">Pedidos do período ainda em andamento</div>
+                            <div class="kpi-linha"><span id="kpi-andamento">—</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="small text-muted mt-2 mb-0" id="kpi-comparacao"></p>
+    </section>
+
+    <div class="row g-3 mb-3">
+        <!-- RF02 - Evolução das vendas -->
+        <div class="col-12 col-xl-8">
+            <section class="card h-100 shadow-sm painel" id="painel-serie" aria-labelledby="titulo-serie">
+                <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
+                    <h3 class="h6 mb-0 me-auto" id="titulo-serie">Evolução das vendas</h3>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Medida exibida" id="serie-medida">
+                        <button type="button" class="btn btn-outline-primary active" data-medida="faturamento">Faturamento</button>
+                        <button type="button" class="btn btn-outline-primary" data-medida="pedidos">Pedidos</button>
+                        <button type="button" class="btn btn-outline-primary" data-medida="ticketMedio">Ticket médio</button>
+                    </div>
+                    <label class="visually-hidden" for="serie-agrupamento">Agrupamento</label>
+                    <select id="serie-agrupamento" class="form-select form-select-sm w-auto">
+                        <option value="">Agrupar: automático</option>
+                        <option value="DIA">Por dia</option>
+                        <option value="SEMANA">Por semana</option>
+                        <option value="MES">Por mês</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-alternar-tabela="serie">Tabela</button>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2" id="serie-resumo"></p>
+                    <div class="grafico grafico-alto"><canvas id="grafico-serie" role="img"
+                                                              aria-label="Gráfico da evolução das vendas"></canvas></div>
+                    <div class="tabela-alternativa" id="tabela-serie" hidden></div>
+                    <div class="vazio" hidden>Nenhuma venda no período selecionado.</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- RF03 - Situação dos pedidos -->
+        <div class="col-12 col-xl-4">
+            <section class="card h-100 shadow-sm painel" id="painel-situacao" aria-labelledby="titulo-situacao">
+                <div class="card-header bg-white d-flex align-items-center gap-2">
+                    <h3 class="h6 mb-0 me-auto" id="titulo-situacao">Situação dos pedidos</h3>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-alternar-tabela="situacao">Tabela</button>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center g-2 mb-2">
+                        <div class="col-4"><div class="mini-numero" id="sit-andamento">—</div><div class="mini-rotulo">Em andamento</div></div>
+                        <div class="col-4"><div class="mini-numero" id="sit-finalizados">—</div><div class="mini-rotulo">Finalizados</div></div>
+                        <div class="col-4"><div class="mini-numero" id="sit-cancelados">—</div><div class="mini-rotulo">Cancelados</div></div>
+                    </div>
+                    <div class="grafico grafico-status"><canvas id="grafico-situacao" role="img"
+                                                               aria-label="Quantidade de pedidos por status"></canvas></div>
+                    <div class="tabela-alternativa" id="tabela-situacao" hidden></div>
+                    <p class="small text-muted mb-1 mt-2" id="sit-tempos"></p>
+                    <p class="small text-muted mb-0"><i class="bi bi-hand-index me-1"></i>Clique em um status para listar os pedidos abaixo.</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <!-- RF02 - Distribuição das vendas -->
+        <div class="col-12 col-xl-6">
+            <section class="card h-100 shadow-sm painel" id="painel-distribuicao" aria-labelledby="titulo-distribuicao">
+                <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
+                    <h3 class="h6 mb-0 me-auto" id="titulo-distribuicao">Distribuição do faturamento</h3>
+                    <label class="visually-hidden" for="distribuicao-dimensao">Dimensão</label>
+                    <select id="distribuicao-dimensao" class="form-select form-select-sm w-auto">
+                        <option value="HORA">Por hora do dia</option>
+                        <option value="DIA_SEMANA">Por dia da semana</option>
+                        <option value="CATEGORIA">Por categoria</option>
+                        <option value="TIPO_ENTREGA">Por tipo de entrega</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-alternar-tabela="distribuicao">Tabela</button>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2" id="distribuicao-destaque"></p>
+                    <div class="grafico"><canvas id="grafico-distribuicao" role="img"
+                                                 aria-label="Distribuição do faturamento"></canvas></div>
+                    <div class="tabela-alternativa" id="tabela-distribuicao" hidden></div>
+                    <div class="vazio" hidden>Nenhuma venda no período selecionado.</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- RF04 - Produtos mais vendidos -->
+        <div class="col-12 col-xl-6">
+            <section class="card h-100 shadow-sm painel" id="painel-ranking" aria-labelledby="titulo-ranking">
+                <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
+                    <h3 class="h6 mb-0 me-auto" id="titulo-ranking">Produtos mais vendidos</h3>
+                    <label class="visually-hidden" for="ranking-ordem">Ordenar por</label>
+                    <select id="ranking-ordem" class="form-select form-select-sm w-auto">
+                        <option value="QUANTIDADE">Por quantidade</option>
+                        <option value="FATURAMENTO">Por faturamento</option>
+                    </select>
+                    <label class="visually-hidden" for="ranking-categoria">Categoria</label>
+                    <select id="ranking-categoria" class="form-select form-select-sm w-auto">
+                        <option value="">Todas as categorias</option>
+                    </select>
+                    <label class="visually-hidden" for="ranking-limite">Quantidade de produtos</label>
+                    <select id="ranking-limite" class="form-select form-select-sm w-auto">
+                        <option value="5">Top 5</option>
+                        <option value="10" selected>Top 10</option>
+                        <option value="20">Top 20</option>
+                    </select>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm align-middle mb-0 tabela-ranking">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="ps-3">#</th>
+                                <th scope="col">Produto</th>
+                                <th scope="col" class="text-end">Qtd.</th>
+                                <th scope="col" class="text-end">Faturamento</th>
+                                <th scope="col" class="coluna-barra"><span class="visually-hidden">Participação</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="ranking-linhas">
+                            <tr><td colspan="5" class="text-center text-muted py-4">Carregando…</td></tr>
+                        </tbody>
+                    </table>
+                    <p class="small text-muted px-3 py-2 mb-0 border-top" id="ranking-rodape"></p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- RF03 - Fila em tempo real -->
+        <div class="col-12 col-xxl-5">
+            <section class="card h-100 shadow-sm painel" id="painel-fila" aria-labelledby="titulo-fila">
+                <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
+                    <h3 class="h6 mb-0 me-auto" id="titulo-fila">
+                        Pedidos em aberto agora
+                        <span class="badge rounded-pill text-bg-light border ms-1" id="fila-total">0</span>
+                    </h3>
+                    <label for="fila-limite" class="small text-muted mb-0">Atraso após</label>
+                    <select id="fila-limite" class="form-select form-select-sm w-auto">
+                        <option value="30">30 min</option>
+                        <option value="45" selected>45 min</option>
+                        <option value="60">60 min</option>
+                        <option value="90">90 min</option>
+                    </select>
+                </div>
+                <div class="card-body p-0">
+                    <div class="small px-3 py-2 border-bottom" id="fila-resumo"></div>
+                    <div class="table-responsive tabela-rolavel">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="ps-3">Pedido</th>
+                                    <th scope="col">Cliente</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col" class="text-end pe-3">Espera</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fila-linhas">
+                                <tr><td colspan="4" class="text-center text-muted py-4">Carregando…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="small text-muted px-3 py-2 mb-0 border-top">
+                        Tempo real: considera todos os pedidos não finalizados, independentemente do período.
+                    </p>
+                </div>
+            </section>
+        </div>
+
+        <!-- RF03 / RF05 - Pedidos do período -->
+        <div class="col-12 col-xxl-7">
+            <section class="card h-100 shadow-sm painel" id="painel-pedidos" aria-labelledby="titulo-pedidos">
+                <div class="card-header bg-white d-flex flex-wrap align-items-center gap-2">
+                    <h3 class="h6 mb-0 me-auto" id="titulo-pedidos">Pedidos do período</h3>
+                    <label class="visually-hidden" for="pedidos-status">Status</label>
+                    <select id="pedidos-status" class="form-select form-select-sm w-auto">
+                        <option value="">Todos os status</option>
+                    </select>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="ps-3">Pedido</th>
+                                    <th scope="col">Entrada</th>
+                                    <th scope="col">Cliente</th>
+                                    <th scope="col">Tipo</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col" class="text-end">Total</th>
+                                    <th scope="col" class="text-end pe-3">Atendimento</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pedidos-linhas">
+                                <tr><td colspan="7" class="text-center text-muted py-4">Carregando…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 px-3 py-2 border-top small"
+                         aria-label="Paginação dos pedidos">
+                        <span class="text-muted" id="pedidos-info"></span>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" id="pedidos-anterior">
+                                <i class="bi bi-chevron-left"></i> Anterior</button>
+                            <button type="button" class="btn btn-outline-secondary" id="pedidos-proxima">
+                                Próxima <i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </nav>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Chart.js 2.9.4 já distribuído com o projeto (funciona sem internet) -->
+    <script th:src="@{/plugins/chart.js/Chart.min.js}"></script>
+    <script th:src="@{/js/dashboard.js}"></script>
+</div>
+
+</body>
+</html>

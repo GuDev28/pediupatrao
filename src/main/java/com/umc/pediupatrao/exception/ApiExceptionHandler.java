@@ -41,6 +41,11 @@ public class ApiExceptionHandler {
         return resposta(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(ParametroInvalidoException.class)
+    public ResponseEntity<ErroResposta> parametroInvalido(ParametroInvalidoException ex, HttpServletRequest request) {
+        return resposta(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(RecursoNaoEncontradoException.class)
     public ResponseEntity<ErroResposta> naoEncontrado(RecursoNaoEncontradoException ex, HttpServletRequest request) {
         return resposta(HttpStatus.NOT_FOUND, ex.getMessage(), request);
@@ -52,8 +57,17 @@ public class ApiExceptionHandler {
                 "O registro foi alterado por outro usuário ao mesmo tempo. Recarregue e tente novamente.", request);
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
-        MissingServletRequestParameterException.class})
+    /** Parâmetro da URL com tipo errado (ex.: limite=dez): informa qual parâmetro corrigir. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErroResposta> tipoDeParametroInvalido(MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+        String esperado = ex.getRequiredType() != null && Number.class.isAssignableFrom(ex.getRequiredType())
+                ? " (esperado um número inteiro)" : "";
+        return resposta(HttpStatus.BAD_REQUEST, "Valor inválido para o parâmetro '" + ex.getName() + "': '"
+                + ex.getValue() + "'" + esperado + ".", request);
+    }
+
+    @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class})
     public ResponseEntity<ErroResposta> requisicaoInvalida(Exception ex, HttpServletRequest request) {
         log.debug("Requisição inválida em {}: {}", request.getRequestURI(), ex.getMessage());
         return resposta(HttpStatus.BAD_REQUEST,
