@@ -13,6 +13,14 @@ body {
     height: 100vh;
 }
 
+/* Em telas grandes o menu acompanha a rolagem (páginas longas, como o dashboard) */
+@media (min-width: 769px) {
+    #sidebar {
+        position: sticky;
+        top: 0;
+    }
+}
+
 #sidebar a {
     color: white;
     text-decoration: none;
